@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>sunSettings</title>
+        <link rel="stylesheet" href="css/css.css">
+    </head>
+
+    <body>
+        <div id="nav-bar" data-bind="attr: {class: menuStatus}">
+            <section class="search">
+                <div class="start row">
+                    <div class="label">Start</div>
+                    <input type="text" class="field" data-bind="value: startPlaceField, event: {keyup: keyHandler}">
+                    <div class="row">
+                        <button type="button" class="button" data-bind="click: clickHandler">Submit</button>
+                    </div>
+                </div>
+                <div class="finish row">
+                    <div class="label">Finish</div>
+                    <input type="text" class="field" data-bind="event: {keyup: keyHandler}">
+                    <div class="row">
+                        <button type="button" class="button" data-bind="click: clickHandler">Submit</button>
+                    </div>
+                </div>
+            </section>
+            <section class="weather">
+                <div class="cur-condition">
+                    <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
+                    <p class="cur-cond-text" data-bind="text: currentCondition">
+                        <p>
+                </div>
+                <div class="temps">
+                    <p class="temp" data-bind="text: currentTemp"></p>
+                    <p class="high-temp" data-bind="text: maxTemp"></p>
+                    <p class='low-temp' data-bind="text: minTemp"></p>
+                </div>
+            </section>
+        </div>
+        <div id="hamburger" data-bind="attr: {class: menuStatus}, click: openMenu">
+            <div class="icon">></div>
+        </div>
+        <div id="map" data-bind="markerClicks: places"></div>
+        <div class="alert-container">
+            <div class="alert-window">
+                <div class="message label" data-bind="text: alertMessage">Allow geolocation or enter starting location:</div>
+                <div class="form-container">
+                    <input type="text" class="field" data-bind="event: {keyup: keyHandler}">
+                    <button type="button" class="button" data-bind="click: clickHandler, click: closeAlert">Submit</button>
+                </div>          
+            </div>
+        </div>
+        <script src="js/main.min.js"></script>
+        <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek&callback=initMap&libraries=places"></script>
+    </body>
+
+</html>
