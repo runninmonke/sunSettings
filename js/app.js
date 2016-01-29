@@ -236,7 +236,7 @@ var viewModel = function() {
 			}
 
 			if (map.getCenter()) {
-				vm.startPlace(new Place({name: 'Start', latLng}));
+				vm.startPlace(new Place({name: 'Start', latLng: latLng}));
 				vm.closeAlert();
 			} else {
 				vm.alertMessage('Error with geolocation. Enter starting location:');
@@ -299,8 +299,6 @@ var viewModel = function() {
 		vm.maxTemp(weather.forecast.forecastday[0].day.maxtemp_f + '°F');
 		vm.minTemp(weather.forecast.forecastday[0].day.mintemp_f + '°F');
 	};
-
-
 };
 
 /* Callback function for the initial Google Maps API request */
