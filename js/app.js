@@ -30,8 +30,8 @@ var Place = function(data) {
 
 	/* Loading message in case content is slow to build */
 	self.content = 'Loading...';
-	console.log(self.latLng());
-	/* Skip the geocode request if latLng property was already passed in */
+
+	/* Get missing address or LatLng. Skip to creating mark if both already present */
 	if (!self.latLng() && self.address()) {
 		self.getGeocodeInfo({address: self.address()});
 	} else if (self.latLng() && !self.address()) {
@@ -48,10 +48,7 @@ Place.prototype.getGeocodeInfo = function(data) {
 	geocoder.geocode(data, function(results, status) {
 		if (status == google.maps.GeocoderStatus.OK) {
 			self.address(results[0].formatted_address);
-			self.latLng({
-				lat: results[0].geometry.location.lat(),
-				lng: results[0].geometry.location.lng()
-			});
+			self.latLng(results[0].geometry.location);
 			self.createMarker();
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
@@ -84,7 +81,7 @@ Place.prototype.createMarker = function() {
 
 Place.prototype.getWeather = function() {
 	/* Use an API to get weather info and call function to calculate the local time offset from UTC **/
-	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + this.latLng.lat + ',' + this.latLng.lng, function(results) {
+	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + this.latLng.lat() + ',' + this.latLng.lng(), function(results) {
 		this.weather = results;
 		if (!this.weather.hasOwnProperty('error')) {
 			this.calcTimeOffset();
@@ -212,8 +209,8 @@ var viewModel = function() {
 			if (vm.startPlace() && vm.startPlace().address()) {
 				return vm.startPlace().address();
 			} else if (vm.startPlace() && vm.startPlace().latLng()) {
-				var latLngOut = vm.startPlace().latLng().lat.toString().slice(0,9);
-				latLngOut += ', ' + vm.startPlace().latLng().lng.toString().slice(0,9);
+				var latLngOut = vm.startPlace().latLng().lat().toString().slice(0,9);
+				latLngOut += ', ' + vm.startPlace().latLng().lng().toString().slice(0,9);
 				return latLngOut;
 			}
 		},
@@ -226,12 +223,9 @@ var viewModel = function() {
 
 	vm.loadStartLocation = function(position) {
 		if (position) {
-			var latLng = {
-				lat: position.coords.latitude,
-				lng: position.coords.longitude
-			};
+			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 			
-			if (latLng.lat < 90 && latLng.lat > -90) {
+			if (latLng.lat() < 90 && latLng.lat() > -90) {
 				map.setCenter(latLng);
 			}
 
