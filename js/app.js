@@ -49,6 +49,7 @@ Place.prototype.getGeocodeInfo = function(data) {
 		if (status == google.maps.GeocoderStatus.OK) {
 			self.address(results[0].formatted_address);
 			self.latLng(results[0].geometry.location);
+			map.setCenter(self.latLng());
 			self.createMarker();
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
@@ -172,10 +173,35 @@ Place.prototype.deselect = function() {
 var viewModel = function() {
 	vm = this;
 
+	vm.showAlert = ko.observable(true);
 	vm.alertMessage = ko.observable('Allow geolocation or enter starting location:');
+	$('.alert-window .field').focus();
 
-	vm.closeAlert = function() {
-		$('.alert-container').toggleClass('hidden');
+
+	vm.startPlace = ko.observable();
+	vm.startPlaceField = ko.computed({
+		read: function(){
+			/* Remove alert window if place looks valid and therfore map should be loaded*/ 
+			if (vm.startPlace() && vm.startPlace().latLng() && vm.showAlert()) {
+				vm.showAlert(false);
+			}
+
+			/* Display address if available */
+			if (vm.startPlace() && vm.startPlace().address()) {
+				return vm.startPlace().address();
+			} else if (vm.startPlace() && vm.startPlace().latLng()) {
+				var latLngOut = vm.startPlace().latLng().lat().toString().slice(0,9);
+				latLngOut += ', ' + vm.startPlace().latLng().lng().toString().slice(0,9);
+				return latLngOut;
+			}
+		},
+		write: function(){
+		},
+		owner: this
+	});
+
+	vm.loadStart = function() {
+		vm.startPlace(new Place({address: $('.alert-window .field')[0].value}));
 	};
 
 	vm.menuStatus = ko.observable('closed');
@@ -193,21 +219,6 @@ var viewModel = function() {
 
 	vm.openMenu();
 
-	vm.startPlace = ko.observable();
-	vm.startPlaceField = ko.computed({
-		read: function(){
-			if (vm.startPlace() && vm.startPlace().address()) {
-				return vm.startPlace().address();
-			} else if (vm.startPlace() && vm.startPlace().latLng()) {
-				var latLngOut = vm.startPlace().latLng().lat().toString().slice(0,9);
-				latLngOut += ', ' + vm.startPlace().latLng().lng().toString().slice(0,9);
-				return latLngOut;
-			}
-		},
-		write: function(){
-		},
-		owner: this
-	});
 
 	vm.loadStartLocation = function(position) {
 		if (position) {
@@ -257,7 +268,9 @@ var viewModel = function() {
 
 	/* Call function depending on status of the search button */
 	vm.submitStart = function(obj, evt) {
-		vm.startPlace().deactivate();
+		if (vm.startPlace()) {
+			vm.startPlace().deactivate();
+		}
 		vm.startPlace(new Place({address: $('.start .field')[0].value}));
 	};
 
@@ -279,6 +292,10 @@ var viewModel = function() {
 
 	var autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0], {types: ['geocode']});
 	var autocompleteFinish = new google.maps.places.Autocomplete($('.finish .field')[0], {types: ['geocode']});
+	var autocompleteAlert = new google.maps.places.Autocomplete($('.alert-window .field')[0], {types: ['geocode']});
+	
+	autocompleteStart.bindTo('bounds', map);
+	autocompleteFinish.bindTo('bounds', map);
 
 };
 

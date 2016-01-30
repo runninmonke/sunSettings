@@ -44,12 +44,12 @@
             <div class="icon">></div>
         </div>
         <div id="map" data-bind="markerClicks: places"></div>
-        <div class="alert-container">
+        <div class="alert-container" data-bind="visible: showAlert">
             <div class="alert-window">
                 <div class="message label" data-bind="text: alertMessage">Allow geolocation or enter starting location:</div>
                 <div class="form-container">
                     <input type="text" class="field" data-bind="">
-                    <button type="button" class="button" data-bind="click: submitStart, click: closeAlert">Submit</button>
+                    <button type="button" class="button" data-bind="click: loadStart">Submit</button>
                 </div>          
             </div>
         </div>
