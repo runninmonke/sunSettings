@@ -14,16 +14,16 @@
             <section class="search">
                 <div class="start row">
                     <div class="label">Start</div>
-                    <input type="text" class="field" data-bind="value: startPlaceField, event: {keyup: keyHandler}">
+                    <input type="text" class="field" data-bind="value: startPlaceField">
                     <div class="row">
-                        <button type="button" class="button" data-bind="click: clickHandler">Submit</button>
+                        <button type="button" class="button" data-bind="click: submitStart">Submit</button>
                     </div>
                 </div>
                 <div class="finish row">
                     <div class="label">Finish</div>
-                    <input type="text" class="field" data-bind="event: {keyup: keyHandler}">
+                    <input type="text" class="field" data-bind="">
                     <div class="row">
-                        <button type="button" class="button" data-bind="click: clickHandler">Submit</button>
+                        <button type="button" class="button" data-bind="">Submit</button>
                     </div>
                 </div>
             </section>
@@ -48,8 +48,8 @@
             <div class="alert-window">
                 <div class="message label" data-bind="text: alertMessage">Allow geolocation or enter starting location:</div>
                 <div class="form-container">
-                    <input type="text" class="field" data-bind="event: {keyup: keyHandler}">
-                    <button type="button" class="button" data-bind="click: clickHandler, click: closeAlert">Submit</button>
+                    <input type="text" class="field" data-bind="">
+                    <button type="button" class="button" data-bind="click: submitStart, click: closeAlert">Submit</button>
                 </div>          
             </div>
         </div>

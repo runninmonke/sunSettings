@@ -169,16 +169,6 @@ Place.prototype.deselect = function() {
 	this.marker.setAnimation(null);
 };
 
-/* Declare variables that need to be global (mostly necessary due to callback functions) */
-var map;
-var geocoder;
-var infoWindow;
-var detailService;
-var directionsService;
-var directionsDisplay;
-var panorama;
-var vm;
-
 var viewModel = function() {
 	vm = this;
 
@@ -214,9 +204,7 @@ var viewModel = function() {
 				return latLngOut;
 			}
 		},
-		write: function(value){
-			vm.startPlace().deactivate();
-			vm.startPlace(new Place({address: value}));
+		write: function(){
 		},
 		owner: this
 	});
@@ -267,15 +255,10 @@ var viewModel = function() {
 		return true;
 	};
 
-	vm.keyHandler = function(obj, evt) {
-		if (evt.keyCode == 13) {
-			vm.clickHandler();
-		}
-	};
-
 	/* Call function depending on status of the search button */
-	vm.clickHandler = function(obj, evt) {
-		console.log(evt);
+	vm.submitStart = function(obj, evt) {
+		vm.startPlace().deactivate();
+		vm.startPlace(new Place({address: $('.start .field')[0].value}));
 	};
 
 	/* Variables for weather section display */
@@ -293,7 +276,20 @@ var viewModel = function() {
 		vm.maxTemp(weather.forecast.forecastday[0].day.maxtemp_f + '°F');
 		vm.minTemp(weather.forecast.forecastday[0].day.mintemp_f + '°F');
 	};
+
+	var autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0], {types: ['geocode']});
+	var autocompleteFinish = new google.maps.places.Autocomplete($('.finish .field')[0], {types: ['geocode']});
+
 };
+
+/* Declare variables that need to be global (mostly necessary due to callback functions) */
+var map;
+var geocoder;
+var infoWindow;
+var directionsService;
+var directionsDisplay;
+var panorama;
+var vm;
 
 /* Callback function for the initial Google Maps API request */
 var initMap = function() {
@@ -318,7 +314,6 @@ var initMap = function() {
 	/* Initiate the various google maps objects that will be used */
 	geocoder = new google.maps.Geocoder();
 	infoWindow = new google.maps.InfoWindow();
-	detailService = new google.maps.places.PlacesService(map);
 
 	/* Initialize direction services */
 	directionsService = new google.maps.DirectionsService();
