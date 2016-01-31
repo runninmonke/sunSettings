@@ -49,6 +49,8 @@ Place.prototype.getGeocodeInfo = function(data) {
 		if (status == google.maps.GeocoderStatus.OK) {
 			self.address(results[0].formatted_address);
 			self.latLng(results[0].geometry.location);
+			self.latLngOut = self.latLng().lat().toString().slice(0,9);
+			self.latLngOut += ', ' + self.latLng().lng().toString().slice(0,9);
 			map.setCenter(self.latLng());
 			self.createMarker();
 		} else {
@@ -170,13 +172,21 @@ Place.prototype.deselect = function() {
 	this.marker.setAnimation(null);
 };
 
+Place.prototype.displayText = function() {
+	/* Display address if available */
+	if (this.address()) {
+		return this.address();
+	} else if (this.latLngOut) {
+		return this.latLngOut;
+	}
+}
+
 var viewModel = function() {
 	vm = this;
 
 	vm.showAlert = ko.observable(true);
 	vm.alertMessage = ko.observable('Allow geolocation or enter starting location:');
 	$('.alert-window .field').focus();
-
 
 	vm.startPlace = ko.observable();
 	vm.startPlaceField = ko.computed({
@@ -186,13 +196,20 @@ var viewModel = function() {
 				vm.showAlert(false);
 			}
 
-			/* Display address if available */
-			if (vm.startPlace() && vm.startPlace().address()) {
-				return vm.startPlace().address();
-			} else if (vm.startPlace() && vm.startPlace().latLng()) {
-				var latLngOut = vm.startPlace().latLng().lat().toString().slice(0,9);
-				latLngOut += ', ' + vm.startPlace().latLng().lng().toString().slice(0,9);
-				return latLngOut;
+			if (vm.startPlace()) {
+				return vm.startPlace().displayText();
+			}
+		},
+		write: function(){
+		},
+		owner: this
+	});
+
+	vm.finishPlace = ko.observable();
+	vm.finishPlaceField = ko.computed({
+		read: function(){
+			if (vm.finishPlace()) {
+				return vm.finishPlace().displayText();
 			}
 		},
 		write: function(){
@@ -230,7 +247,6 @@ var viewModel = function() {
 
 			if (map.getCenter()) {
 				vm.startPlace(new Place({name: 'Start', latLng: latLng}));
-				vm.closeAlert();
 			} else {
 				vm.alertMessage('Error with geolocation. Enter starting location:');
 			}
@@ -267,11 +283,18 @@ var viewModel = function() {
 	};
 
 	/* Call function depending on status of the search button */
-	vm.submitStart = function(obj, evt) {
+	vm.submitStart = function() {
 		if (vm.startPlace()) {
 			vm.startPlace().deactivate();
 		}
-		vm.startPlace(new Place({address: $('.start .field')[0].value}));
+		vm.startPlace(new Place({address: $('.start .field')[0].value, name: 'Start'}));
+	};
+
+	vm.submitFinish = function() {
+		if (vm.finishPlace()) {
+			vm.finishPlace().deactivate();
+		}
+		vm.finishPlace(new Place({address: $('.finish .field')[0].value, name: 'Finish'}));
 	};
 
 	/* Variables for weather section display */
@@ -290,9 +313,9 @@ var viewModel = function() {
 		vm.minTemp(weather.forecast.forecastday[0].day.mintemp_f + '°F');
 	};
 
-	var autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0], {types: ['geocode']});
-	var autocompleteFinish = new google.maps.places.Autocomplete($('.finish .field')[0], {types: ['geocode']});
-	var autocompleteAlert = new google.maps.places.Autocomplete($('.alert-window .field')[0], {types: ['geocode']});
+	var autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0]);
+	var autocompleteFinish = new google.maps.places.Autocomplete($('.finish .field')[0]);
+	var autocompleteAlert = new google.maps.places.Autocomplete($('.alert-window .field')[0]);
 	
 	autocompleteStart.bindTo('bounds', map);
 	autocompleteFinish.bindTo('bounds', map);

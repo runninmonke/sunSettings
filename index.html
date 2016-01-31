@@ -21,10 +21,13 @@
                 </div>
                 <div class="finish row">
                     <div class="label">Finish</div>
-                    <input type="text" class="field" data-bind="">
+                    <input type="text" class="field" data-bind="value: finishPlaceField">
                     <div class="row">
-                        <button type="button" class="button" data-bind="">Submit</button>
+                        <button type="button" class="button" data-bind="click: submitFinish">Submit</button>
                     </div>
+                </div>
+                <div class="row">
+                    <button type="button" class="button"></button>
                 </div>
             </section>
             <section class="weather">
@@ -48,7 +51,7 @@
             <div class="alert-window">
                 <div class="message label" data-bind="text: alertMessage">Allow geolocation or enter starting location:</div>
                 <div class="form-container">
-                    <input type="text" class="field" data-bind="">
+                    <input type="text" class="field" placeholder="">
                     <button type="button" class="button" data-bind="click: loadStart">Submit</button>
                 </div>          
             </div>
