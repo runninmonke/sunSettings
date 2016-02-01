@@ -10,7 +10,8 @@ body {
 
 /* General */
 .row {
-  display: block; }
+  display: block;
+  min-height: calc(1em + 10px); }
 
 .label {
   color: #ffe168;
@@ -87,8 +88,6 @@ body {
   .search .button {
     position: absolute;
     right: 13px; }
-  .search .finish {
-    padding-top: 15px; }
 
 /*** Weather ***/
 .weather {

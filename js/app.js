@@ -179,14 +179,51 @@ Place.prototype.displayText = function() {
 	} else if (this.latLngOut) {
 		return this.latLngOut;
 	}
-}
+};
+
+
+var Journey = function(data, route) {
+	this.route = route;
+	directionsDisplay.setDirections(route);
+};
 
 var viewModel = function() {
 	vm = this;
 
+	/* Increase map zoom level on large displays */
+	if (window.matchMedia('(min-width: 700px)').matches) {
+		map.setZoom(12);
+	}
+
 	vm.showAlert = ko.observable(true);
 	vm.alertMessage = ko.observable('Allow geolocation or enter starting location:');
 	$('.alert-window .field').focus();
+
+	vm.getStartLocation = function(position) {
+		if (position) {
+			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+			
+			if (latLng.lat() < 90 && latLng.lat() > -90) {
+				map.setCenter(latLng);
+			}
+
+			if (map.getCenter()) {
+				vm.startPlace(new Place({name: 'Start', latLng: latLng}));
+			} else {
+				vm.alertMessage('Error with geolocation. Enter starting location:');
+			}
+		}
+	};
+
+	vm.loadStart = function() {
+		vm.startPlace(new Place({address: $('.alert-window .field')[0].value}));
+	};
+
+	if (navigator.geolocation) {
+		navigator.geolocation.getCurrentPosition(vm.getStartLocation);
+	} else {
+		alert('Browser not supported');
+	}
 
 	vm.startPlace = ko.observable();
 	vm.startPlaceField = ko.computed({
@@ -217,10 +254,6 @@ var viewModel = function() {
 		owner: this
 	});
 
-	vm.loadStart = function() {
-		vm.startPlace(new Place({address: $('.alert-window .field')[0].value}));
-	};
-
 	vm.menuStatus = ko.observable('closed');
 
 	/* Toggle menu nav-bar open and closed */
@@ -236,34 +269,43 @@ var viewModel = function() {
 
 	vm.openMenu();
 
-
-	vm.loadStartLocation = function(position) {
-		if (position) {
-			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-			
-			if (latLng.lat() < 90 && latLng.lat() > -90) {
-				map.setCenter(latLng);
-			}
-
-			if (map.getCenter()) {
-				vm.startPlace(new Place({name: 'Start', latLng: latLng}));
-			} else {
-				vm.alertMessage('Error with geolocation. Enter starting location:');
-			}
+	/* Call function depending on status of the search button */
+	vm.submitStart = function() {
+		if (vm.startPlace()) {
+			vm.startPlace().deactivate();
 		}
+		vm.startPlace(new Place({address: $('.start .field')[0].value, name: 'Start'}));
 	};
 
-	if (navigator.geolocation) {
-		navigator.geolocation.getCurrentPosition(vm.loadStartLocation);
-	} else {
-		alert('Browser not supported');
-	}
+	vm.submitFinish = function() {
+		if (vm.finishPlace()) {
+			vm.finishPlace().deactivate();
+		}
+		vm.finishPlace(new Place({address: $('.finish .field')[0].value, name: 'Finish'}));
+	};
 
-	/* Increase map zoom level on large displays */
-	if (window.matchMedia('(min-width: 700px)').matches) {
-		map.setZoom(12);
-	}
 
+
+	vm.journey = ko.computed({
+		read: function() {
+			if (vm.startPlace() && vm.finishPlace()) {
+				var data = {
+					origin: vm.startPlace().address(),
+					destination: vm.finishPlace().address(),
+					travelMode: google.maps.TravelMode.DRIVING
+				};
+				
+				directionsService.route(data, function(result, status) {
+					if (status == google.maps.DirectionsStatus.OK) {
+						vm.journey(new Journey(data, result));		
+					}
+				});
+			}
+		},
+		write: function(obj) {
+			return obj;
+		}
+	});
 
 	/* Toggle or change selected place */
 	vm.changePlace = function(place) {
@@ -280,21 +322,6 @@ var viewModel = function() {
 
 		/* Allow default click action as well by returning true */
 		return true;
-	};
-
-	/* Call function depending on status of the search button */
-	vm.submitStart = function() {
-		if (vm.startPlace()) {
-			vm.startPlace().deactivate();
-		}
-		vm.startPlace(new Place({address: $('.start .field')[0].value, name: 'Start'}));
-	};
-
-	vm.submitFinish = function() {
-		if (vm.finishPlace()) {
-			vm.finishPlace().deactivate();
-		}
-		vm.finishPlace(new Place({address: $('.finish .field')[0].value, name: 'Finish'}));
 	};
 
 	/* Variables for weather section display */
