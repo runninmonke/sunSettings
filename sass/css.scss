@@ -16,11 +16,12 @@ body {
 /* General */
 
 .row {
-  display: block;
-  min-height: calc(1em + 10px);
+  width: 100%;
+  overflow: hidden;
 }
 
 .label {
+  padding: 1px;
   color: #ffe168;  
   text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444,
                 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444,
@@ -93,23 +94,10 @@ body {
 /*** Search ***/
 
 .search {
-  margin: 7px;
-
-  .field {
-    width: 225px;
-  }
-
-  .status {
-    width: 100%;
-    display: block;
-  }
-
+  margin: 7px 10px 7px 7px;
+  
   .button {
-    position: absolute;
-    right: 13px;
-  }
-
-  .finish {
+    float: right;
   }
 }
 
