@@ -1,4 +1,4 @@
-/*global $, google, ko*/
+/*global $, google, ko, SunCalc*/
 'use strict';
 
 /*eslint-disable quotes*/
@@ -26,7 +26,7 @@ var Place = function(data) {
 	}
 
 	self.active = ko.observable(true);
-	self.status = ko.observable('deselected');
+	self.status = 'deselected';
 
 	/* Loading message in case content is slow to build */
 	self.content = 'Loading...';
@@ -51,12 +51,46 @@ Place.prototype.getGeocodeInfo = function(data) {
 			self.latLng(results[0].geometry.location);
 			self.latLngOut = self.latLng().lat().toString().slice(0,9);
 			self.latLngOut += ', ' + self.latLng().lng().toString().slice(0,9);
+			self.getSunTimes();
 			map.setCenter(self.latLng());
 			self.createMarker();
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
 		}
 	});
+};
+
+Place.prototype.getSunTimes = function() {
+	this.sun = SunCalc.getTimes(vm.getDate(), this.latLng().lat(), this.latLng().lng());
+	this.buildContent();
+};
+
+/* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
+Place.prototype.buildContent = function() {
+	this.content = contentTemplate.start;
+	this.content += contentTemplate.name.replace('%text%', this.name);
+
+	/* Use google streetview image if no place photo exists
+	if (!this.photoUrl) {
+		this.photoUrl = 'https://maps.googleapis.com/maps/api/streetview?fov=120&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek&size=' +
+			INFO_PHOTO.maxWidth + 'x' + INFO_PHOTO.maxHeight + '&location=' + this.address;
+	}
+
+	this.content += contentTemplate.photo.replace('%src%', this.photoUrl).replace('%alt%', 'Photo of ' + this.name);
+	*/
+
+	if (this.hasOwnProperty('sun')) {
+		this.content += contentTemplate.sun.replace('%sunrise%', this.sun.sunrise.toLocaleTimeString())
+			.replace('%noon%', this.sun.solarNoon.toLocaleTimeString())
+			.replace('%sunset%', this.sun.sunset.toLocaleTimeString());
+	}
+
+	this.content += contentTemplate.end;
+
+	/* Update infoWindow content when done if currently selected */
+	if (this.status == 'selected') {
+		infoWindow.setContent(this.content);
+	}
 };
 
 /* Use latLng data to create map marker and get additional details */
@@ -73,11 +107,13 @@ Place.prototype.createMarker = function() {
 	/* Remove marker from map if place not active */
 	if (!self.active()) {
 		self.marker.setMap(null);
+	} else {
+		self.toggleSelected();
 	}
 
 	/* Allow selected place to be changed by clicking map markers */
 	self.marker.addListener('click', function() {
-		vm.changePlace(self);
+		self.toggleSelected();
 	});
 
 };
@@ -109,37 +145,11 @@ Place.prototype.getWeather = function() {
 	});
 	*/
 
-/* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
-Place.prototype.buildContent = function() {
-	this.content = contentTemplate.start;
-	this.content += contentTemplate.name.replace('%text%', this.name);
-
-	/* Use google streetview image if no place photo exists
-	if (!this.photoUrl) {
-		this.photoUrl = 'https://maps.googleapis.com/maps/api/streetview?fov=120&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek&size=' +
-			INFO_PHOTO.maxWidth + 'x' + INFO_PHOTO.maxHeight + '&location=' + this.address;
-	}
-
-	this.content += contentTemplate.photo.replace('%src%', this.photoUrl).replace('%alt%', 'Photo of ' + this.name);
-	*/
-
-	if (this.hasOwnProperty('sun')) {
-		this.content += contentTemplate.sun.replace('%sunrise%', this.sun.rise).replace('%noon%', this.sun.noon).replace('%sunset%', this.sun.set);
-	}
-
-	this.content += contentTemplate.end;
-
-	/* Update infoWindow content when done if currently selected */
-	if (this.status() == 'selected') {
-		infoWindow.setContent(this.content);
-	}
-};
-
 Place.prototype.activate = function() {
 	if (!this.active()) {
 		this.active(true);
 		this.marker.setMap(map);
-		if (this.status() == 'selected') {
+		if (this.status == 'selected') {
 			this.marker.setAnimation(google.maps.Animation.BOUNCE);
 		}
 	}
@@ -155,21 +165,21 @@ Place.prototype.deactivate = function() {
 };
 
 
-Place.prototype.select = function() {
-	var self = this;
-	self.status('selected');
-
-	/* Adjust map marker and infoWindow to show place is selected */
-	if (self.hasOwnProperty('marker')) {
-		self.marker.setAnimation(google.maps.Animation.BOUNCE);
-		infoWindow.setContent(self.content);
-		infoWindow.open(map, self.marker);
+Place.prototype.toggleSelected = function() {
+	if (this.status =='selected') {
+		this.status ='deselected';
+		infoWindow.close();
+	} else {
+		this.status = 'selected';
+		if (this.hasOwnProperty('marker')) {
+			infoWindow.setContent(this.content);
+			infoWindow.open(map, this.marker);
+		}
 	}
 };
 
 Place.prototype.deselect = function() {
-	this.status('deselected');
-	this.marker.setAnimation(null);
+	this.status ='deselected';
 };
 
 Place.prototype.displayText = function() {
@@ -254,6 +264,14 @@ var viewModel = function() {
 		owner: this
 	});
 
+	vm.getDate = function() {
+		if (vm.date && vm.date()) {
+			return vm.date();
+		} else {
+			return new Date();
+		}
+	};
+
 	vm.menuStatus = ko.observable('closed');
 
 	/* Toggle menu nav-bar open and closed */
@@ -284,45 +302,30 @@ var viewModel = function() {
 		vm.finishPlace(new Place({address: $('.finish .field')[0].value, name: 'Finish'}));
 	};
 
+	vm.journey = ko.observable(null);
 
-
-	vm.journey = ko.computed({
-		read: function() {
-			if (vm.startPlace() && vm.finishPlace()) {
-				var data = {
-					origin: vm.startPlace().address(),
-					destination: vm.finishPlace().address(),
-					travelMode: google.maps.TravelMode.DRIVING
-				};
-				
-				directionsService.route(data, function(result, status) {
-					if (status == google.maps.DirectionsStatus.OK) {
-						vm.journey(new Journey(data, result));		
-					}
-				});
-			}
-		},
-		write: function(obj) {
-			return obj;
+	vm.getJourney = ko.computed(function() {
+		if (vm.startPlace() && vm.finishPlace()) {
+			var data = {
+				origin: vm.startPlace().address(),
+				destination: vm.finishPlace().address(),
+				travelMode: google.maps.TravelMode.DRIVING
+			};
+			
+			directionsService.route(data, function(result, status) {
+				if (status == google.maps.DirectionsStatus.OK) {
+					vm.journey(new Journey(data, result));		
+				}
+			});
 		}
 	});
 
-	/* Toggle or change selected place */
-	vm.changePlace = function(place) {
-		if (typeof vm.selectedPlace() == 'object') {
-			vm.selectedPlace().deselect();
-			if (place === vm.selectedPlace()) {
-				vm.selectedPlace = ko.observable();
-				infoWindow.close();
-				return;
-			}
+	vm.dayLength = ko.computed(function(){
+		if (!(vm.journey() == null) && vm.startPlace().sun && vm.finishPlace().sun) {
+			$('.info').toggleClass('hidden', false);
+			return (vm.finishPlace().sun.sunset.getTime() - vm.startPlace().sun.sunset.getTime()) / 60000;
 		}
-		vm.selectedPlace(place);
-		vm.selectedPlace().select();
-
-		/* Allow default click action as well by returning true */
-		return true;
-	};
+	});
 
 	/* Variables for weather section display */
 	vm.conditionImg = ko.observable('');

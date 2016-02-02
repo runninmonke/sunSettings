@@ -29,7 +29,6 @@ body {
 
 .button {
   border: none;
-  color: white;
   background-color: $menu-item;
   width: auto;
   font-size: 0.8em;
@@ -37,6 +36,7 @@ body {
   border-radius: 2px;
   pointer-events: all;
   cursor: pointer;
+  color: white;
 }
 
 .field {
@@ -59,6 +59,7 @@ body {
   pointer-events: none;
   margin-left: -235px;
   overflow: hidden;
+  color: white;
 }
 
 .open {
@@ -112,6 +113,14 @@ body {
   }
 }
 
+/*** Info ***/
+
+.info {
+  margin: 10px;
+  text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444,
+                0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444,
+                1px 0 1px #444;
+}
 
 /*** Weather ***/
 
@@ -217,7 +226,6 @@ body {
   pointer-events: none;
   display: flex;
   flex-flow: center;
-  color: white;
 }
 
 .alert-window {
@@ -229,6 +237,7 @@ body {
   padding: 15px 25px 10px 25px;
   border-radius: 4px;
   display: flex-wrap;
+  color: white;
     
   .message {
     font-size: 1em;
