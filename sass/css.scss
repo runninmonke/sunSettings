@@ -3,17 +3,17 @@ $map-background: #e9e5dc;
 $menu-background: rgba(128, 128, 128, 0.4);
 $menu-item: rgba(112, 112, 112, 0.8);
 
+/* General */
+
 html,
 body {
- 	height: 100%;
- 	width: 100%;
- 	margin: 0;
- 	padding: 0;
- 	background-color: $map-background;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: $map-background;
   font-family: arial, "Helvetica Neue", helvetica, sans-serif;
 }
-
-/* General */
 
 .row {
   width: 100%;
@@ -61,6 +61,10 @@ body {
   margin-left: -235px;
   overflow: hidden;
   color: white;
+
+  section {
+    margin: 7px 10px 7px 7px;
+  }
 }
 
 .open {
@@ -94,10 +98,12 @@ body {
 /*** Search ***/
 
 .search {
-  margin: 7px 10px 7px 7px;
-  
   .button {
     float: right;
+  }
+
+  .field {
+    padding: 0;
   }
 }
 

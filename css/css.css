@@ -1,4 +1,5 @@
 /*** Color variables ***/
+/* General */
 html,
 body {
   height: 100%;
@@ -8,7 +9,6 @@ body {
   background-color: #e9e5dc;
   font-family: arial, "Helvetica Neue", helvetica, sans-serif; }
 
-/* General */
 .row {
   width: 100%;
   overflow: hidden; }
@@ -48,6 +48,8 @@ body {
   margin-left: -235px;
   overflow: hidden;
   color: white; }
+  #nav-bar section {
+    margin: 7px 10px 7px 7px; }
 
 .open {
   transition: -webkit-transform 0.3s;
@@ -80,10 +82,11 @@ body {
   color: rgba(112, 112, 112, 0.8); }
 
 /*** Search ***/
-.search {
-  margin: 7px 10px 7px 7px; }
-  .search .button {
-    float: right; }
+.search .button {
+  float: right; }
+
+.search .field {
+  padding: 0; }
 
 /*** Info ***/
 .info {
