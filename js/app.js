@@ -112,7 +112,7 @@ Place.prototype.buildContent = function() {
 
 	/* Update infoWindow content when done if currently selected */
 	if (this.status == 'selected') {
-		infoWindow.setContent(this.content);
+		this.infoWindow.setContent(this.content);
 	}
 };
 
@@ -127,6 +127,8 @@ Place.prototype.createMarker = function() {
 		title: self.name
 	});
 
+	this.infoWindow = new google.maps.InfoWindow();
+
 	/* Remove marker from map if place not active */
 	if (!self.active()) {
 		self.marker.setMap(null);
@@ -134,7 +136,7 @@ Place.prototype.createMarker = function() {
 		self.toggleSelected();
 	}
 
-	/* Allow selected place to be changed by clicking map markers */
+	/* Allow selected to toggle by clicking map marker */
 	self.marker.addListener('click', function() {
 		self.toggleSelected();
 	});
@@ -164,12 +166,12 @@ Place.prototype.deactivate = function() {
 Place.prototype.toggleSelected = function() {
 	if (this.status =='selected') {
 		this.status ='deselected';
-		infoWindow.close();
+		this.infoWindow.close();
 	} else {
 		this.status = 'selected';
 		if (this.hasOwnProperty('marker')) {
-			infoWindow.setContent(this.content);
-			infoWindow.open(map, this.marker);
+			this.infoWindow.setContent(this.content);
+			this.infoWindow.open(map, this.marker);
 		}
 	}
 };
@@ -351,7 +353,6 @@ var viewModel = function() {
 /* Declare variables that need to be global (mostly necessary due to callback functions) */
 var map;
 var geocoder;
-var infoWindow;
 var directionsService;
 var directionsDisplay;
 var panorama;
@@ -377,11 +378,10 @@ var initMap = function() {
 		}
 	});
 
-	/* Initiate the various google maps objects that will be used */
+	/* Initiate google maps objects that will be used */
 	geocoder = new google.maps.Geocoder();
-	infoWindow = new google.maps.InfoWindow();
 
-	/* Initialize direction services */
+	/* Direction services */
 	directionsService = new google.maps.DirectionsService();
 	directionsDisplay = new google.maps.DirectionsRenderer();
 	directionsDisplay.setMap(map);
