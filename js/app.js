@@ -222,7 +222,7 @@ var viewModel = function() {
 	};
 
 	vm.loadStart = function() {
-		vm.startPlace(new Place({address: $('.alert-window .field')[0].value}));
+		vm.startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
 	};
 
 	if (navigator.geolocation) {
