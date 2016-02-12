@@ -51,7 +51,9 @@ Place.prototype.getGeocodeInfo = function(data) {
 			self.latLng(results[0].geometry.location);
 			self.latLngOut = self.latLng().lat().toString().slice(0,9);
 			self.latLngOut += ', ' + self.latLng().lng().toString().slice(0,9);
-			self.getSunTimes();
+			self.getTimezone(vm.getDate());
+			self.getSunTimes(vm.getDate());
+			self.getWeather();
 			map.setCenter(self.latLng());
 			self.createMarker();
 		} else {
@@ -60,9 +62,30 @@ Place.prototype.getGeocodeInfo = function(data) {
 	});
 };
 
-Place.prototype.getSunTimes = function() {
-	this.sun = SunCalc.getTimes(vm.getDate(), this.latLng().lat(), this.latLng().lng());
+Place.prototype.getSunTimes = function(time) {
+	this.sun = SunCalc.getTimes(time, this.latLng().lat(), this.latLng().lng());
 	this.buildContent();
+};
+
+Place.prototype.getWeather = function() {
+	var self = this;
+	/* Use an API to get weather info*/
+	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + self.latLng().lat() + ',' + self.latLng().lng(), function(results) {
+		self.weather = results;
+	}).fail(function() {
+		alert('Weather data not available');
+	});
+
+};
+
+Place.prototype.getTimezone = function(time) {
+	var self = this;
+	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + time.getTime()/1000 + '&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek';
+	$.getJSON(url, function(results){
+		if (results.status == 'OK') {
+			self.timezone = results;
+		}
+	});
 };
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
@@ -117,33 +140,6 @@ Place.prototype.createMarker = function() {
 	});
 
 };
-
-Place.prototype.getWeather = function() {
-	/* Use an API to get weather info and call function to calculate the local time offset from UTC **/
-	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + this.latLng.lat() + ',' + this.latLng.lng(), function(results) {
-		this.weather = results;
-		if (!this.weather.hasOwnProperty('error')) {
-			this.calcTimeOffset();
-			vm.displayWeather();
-		}
-	}).fail(function() {
-		alert('Local time and weather data not available');
-	});
-
-};
-
-	/* Search immediate vicinity to see if location is in Google Places and get details, might use for to get directions. 
-	detailService.nearbySearch({
-			location: self.latLng,
-			radius: IMMEDIATE_SEARCH_RADIUS,
-			name: self.name
-		}, function(results, status) {
-			if (status == google.maps.places.PlacesServiceStatus.OK) {
-				self.details = results[0];
-				console.log(results[0]);
-			}
-	});
-	*/
 
 Place.prototype.activate = function() {
 	if (!this.active()) {
