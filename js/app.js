@@ -1,10 +1,12 @@
 /*global $, google, ko, SunCalc*/
 'use strict';
 
+var timeFormatLocale = 'en-US';
+
 /*eslint-disable quotes*/
 /* Template used format data into infoWindow DOM elements */
 var contentTemplate = {
-	sun: '<p>Sunrise: %sunrise%<br>Solar noon: %noon%<br>Sunset: %sunset%</p>',
+	sun: '<p>Sunrise: %sunrise%<br>Solar noon: %noon%<br>Sunset: %sunset%</p><p class="time-zone">in %timezone%</p>',
 	name: '<h3>%text%</h3>',
 	start: "<div class='info-window'>",
 	end: '</div>'
@@ -31,7 +33,9 @@ var Place = function(data) {
 	/* Loading message in case content is slow to build */
 	self.content = 'Loading...';
 
-	/* Get missing address or LatLng. Skip to creating mark if both already present */
+	self.infoWindow = new google.maps.InfoWindow();
+
+	/* Get missing address or LatLng. Skip to creating marker if both already present */
 	if (!self.latLng() && self.address()) {
 		self.getGeocodeInfo({address: self.address()});
 	} else if (self.latLng() && !self.address()) {
@@ -51,7 +55,7 @@ Place.prototype.getGeocodeInfo = function(data) {
 			self.latLng(results[0].geometry.location);
 			self.latLngOut = self.latLng().lat().toString().slice(0,9);
 			self.latLngOut += ', ' + self.latLng().lng().toString().slice(0,9);
-			self.getTimezone(vm.getDate());
+			self.getTimeZone(vm.getDate());
 			self.getSunTimes(vm.getDate());
 			self.getWeather();
 			map.setCenter(self.latLng());
@@ -78,12 +82,13 @@ Place.prototype.getWeather = function() {
 
 };
 
-Place.prototype.getTimezone = function(time) {
+Place.prototype.getTimeZone = function(time) {
 	var self = this;
 	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + time.getTime()/1000 + '&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek';
 	$.getJSON(url, function(results){
 		if (results.status == 'OK') {
-			self.timezone = results;
+			self.timeZone = results;
+			self.buildContent();
 		}
 	});
 };
@@ -103,17 +108,22 @@ Place.prototype.buildContent = function() {
 	*/
 
 	if (this.hasOwnProperty('sun')) {
+		var options = {timeZone: 'UTC'};
+		var timeZoneName = 'UTC';
+
+		if (this.hasOwnProperty('timeZone')) {
+			options = {timeZone: this.timeZone.timeZoneId};
+			timeZoneName = this.timeZone.timeZoneName;
+		}
+
 		this.content += contentTemplate.sun.replace('%sunrise%', this.sun.sunrise.toLocaleTimeString())
-			.replace('%noon%', this.sun.solarNoon.toLocaleTimeString())
-			.replace('%sunset%', this.sun.sunset.toLocaleTimeString());
+			.replace('%noon%', this.sun.solarNoon.toLocaleTimeString(timeFormatLocale, options))
+			.replace('%sunset%', this.sun.sunset.toLocaleTimeString(timeFormatLocale, options)).replace('%timezone%', timeZoneName);
 	}
 
 	this.content += contentTemplate.end;
 
-	/* Update infoWindow content when done if currently selected */
-	if (this.status == 'selected') {
-		this.infoWindow.setContent(this.content);
-	}
+	this.infoWindow.setContent(this.content);
 };
 
 /* Use latLng data to create map marker and get additional details */
@@ -126,8 +136,6 @@ Place.prototype.createMarker = function() {
 		map: map,
 		title: self.name
 	});
-
-	this.infoWindow = new google.maps.InfoWindow();
 
 	/* Remove marker from map if place not active */
 	if (!self.active()) {
@@ -170,7 +178,6 @@ Place.prototype.toggleSelected = function() {
 	} else {
 		this.status = 'selected';
 		if (this.hasOwnProperty('marker')) {
-			this.infoWindow.setContent(this.content);
 			this.infoWindow.open(map, this.marker);
 		}
 	}

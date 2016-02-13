@@ -9,6 +9,12 @@ body {
   background-color: #e9e5dc;
   font-family: arial, "Helvetica Neue", helvetica, sans-serif; }
 
+.time-zone {
+  color: #aaa;
+  font-size: 0.8em;
+  text-align: right;
+  margin: -12px 0 0 0; }
+
 .row {
   width: 100%;
   overflow: hidden; }
