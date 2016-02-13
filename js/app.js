@@ -53,13 +53,22 @@ Place.prototype.getGeocodeInfo = function(data) {
 		if (status == google.maps.GeocoderStatus.OK) {
 			self.address(results[0].formatted_address);
 			self.latLng(results[0].geometry.location);
+
 			self.latLngOut = self.latLng().lat().toString().slice(0,9);
 			self.latLngOut += ', ' + self.latLng().lng().toString().slice(0,9);
+
 			self.getTimeZone(vm.getDate());
 			self.getSunTimes(vm.getDate());
 			self.getWeather();
+			
+
+			if (self.marker) {
+				self.marker.setPosition(self.latLng());
+			} else {
+				self.createMarker();
+			}
+
 			map.setCenter(self.latLng());
-			self.createMarker();
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
 		}
@@ -134,7 +143,8 @@ Place.prototype.createMarker = function() {
 	self.marker = new google.maps.Marker({
 		position: self.latLng(),
 		map: map,
-		title: self.name
+		title: self.name,
+		draggable: true
 	});
 
 	/* Remove marker from map if place not active */
@@ -149,6 +159,17 @@ Place.prototype.createMarker = function() {
 		self.toggleSelected();
 	});
 
+	self.marker.addListener('dragend', function(evt) {
+		self.resetLatLng(evt.latLng);
+	});
+
+};
+
+Place.prototype.resetLatLng = function(latLng) {
+	var self = this;
+	self.latLng(latLng);
+	self.content = 'Loading...';
+	self.getGeocodeInfo({latLng: self.latLng()});
 };
 
 Place.prototype.activate = function() {
