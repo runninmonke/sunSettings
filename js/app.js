@@ -13,7 +13,7 @@ var contentTemplate = {
 };
 /*eslint-enable quotes*/
 
-/* Place class to create all the place objects for the map */
+/* Place class to create any place objects for the map */
 var Place = function(data) {
 	var self = this;
 
@@ -390,9 +390,7 @@ var initMap = function() {
 
 	/* Direction services */
 	directionsService = new google.maps.DirectionsService();
-	directionsDisplay = new google.maps.DirectionsRenderer();
-	directionsDisplay.setMap(map);
-
+	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true});
 	/* Initiate the View-model */
 	ko.applyBindings(new viewModel());
 };

@@ -9,12 +9,6 @@ body {
   background-color: #e9e5dc;
   font-family: arial, "Helvetica Neue", helvetica, sans-serif; }
 
-.time-zone {
-  color: #aaa;
-  font-size: 0.8em;
-  text-align: right;
-  margin: -12px 0 0 0; }
-
 .row {
   width: 100%;
   overflow: hidden; }
@@ -43,6 +37,13 @@ body {
   font-size: 1em;
   border: none;
   border-radius: 2px; }
+
+/*** InfoWindow ***/
+.time-zone {
+  color: #9e9e9e;
+  font-size: 0.8em;
+  text-align: right;
+  margin: -12px 0 0 0; }
 
 /****** Navigation side bar ******/
 #nav-bar {
