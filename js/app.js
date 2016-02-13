@@ -331,10 +331,10 @@ var viewModel = function() {
 	vm.journey = ko.observable(null);
 
 	vm.getJourney = ko.computed(function() {
-		if (vm.startPlace() && vm.finishPlace()) {
+		if (vm.startPlace() && vm.finishPlace() && vm.startPlace().latLng() && vm.finishPlace().latLng()) {
 			var data = {
-				origin: vm.startPlace().address(),
-				destination: vm.finishPlace().address(),
+				origin: vm.startPlace().latLng(),
+				destination: vm.finishPlace().latLng(),
 				travelMode: google.maps.TravelMode.DRIVING
 			};
 			
