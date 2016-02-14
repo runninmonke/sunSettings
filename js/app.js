@@ -239,15 +239,8 @@ var viewModel = function() {
 		if (position) {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 			
-			if (latLng.lat() < 90 && latLng.lat() > -90) {
-				map.setCenter(latLng);
-			}
-
-			if (map.getCenter()) {
-				vm.startPlace(new Place({name: 'Start', latLng: latLng}));
-			} else {
-				vm.alertMessage('Error with geolocation. Enter starting location:');
-			}
+			map.setCenter(latLng);
+			vm.startPlace(new Place({name: 'Start', latLng: latLng}));
 		}
 	};
 
