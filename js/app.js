@@ -13,19 +13,29 @@ var contentTemplate = {
 };
 /*eslint-enable quotes*/
 
-/* Place class to create any place objects for the map */
+/*************************/
+/****** Place Class ******/
+/*************************/
 var Place = function(data) {
 	var self = this;
 
 	self.address = ko.observable();
 	self.latLng = ko.observable();
-	
-	/* Assigns to observable if it exists, otherwise regular assignment */
-	for (var item in data) {
-		if (data.hasOwnProperty(item)) {
-			self[item] ? self[item](data[item]) : self[item] = data[item];
-		}
-	}
+
+	/* Display latLng if no address */
+	self.displayText = ko.computed({
+		read: function() {
+			/* Display address if available */
+			if (this.address) {
+				return self.address();
+			} else if (self.latLngDisplay) {
+				return self.latLngDisplay;
+			}
+		},
+		write: function(){
+		},
+		owner: this
+	});
 
 	self.active = ko.observable(true);
 	self.status = 'deselected';
@@ -34,6 +44,13 @@ var Place = function(data) {
 	self.content = 'Loading...';
 
 	self.infoWindow = new google.maps.InfoWindow();
+	
+	/* Assigns to observable if it exists, otherwise regular assignment */
+	for (var item in data) {
+		if (data.hasOwnProperty(item)) {
+			self[item] ? self[item](data[item]) : self[item] = data[item];
+		}
+	}
 
 	/* Get missing address or LatLng. Skip to creating marker if both already present */
 	if (!self.latLng() && self.address()) {
@@ -47,15 +64,16 @@ var Place = function(data) {
 
 /* Populate properties with Geocoderesults, add a marker and try to get additional details via a series of AJAX requests. */
 Place.prototype.getGeocodeInfo = function(data) {
-	/* Set self = this as a way to make the object's methods available to the callback function. This strategy used in other methods as well */
 	var self = this;
+
+	/* Request geocoder info and then call all functions dependent on the results */
 	geocoder.geocode(data, function(results, status) {
 		if (status == google.maps.GeocoderStatus.OK) {
 			self.address(results[0].formatted_address);
 			self.latLng(results[0].geometry.location);
 
-			self.latLngOut = self.latLng().lat().toString().slice(0,9);
-			self.latLngOut += ', ' + self.latLng().lng().toString().slice(0,9);
+			self.latLngDisplay = self.latLng().lat().toString().slice(0,9);
+			self.latLngDisplay += ', ' + self.latLng().lng().toString().slice(0,9);
 
 			self.getTimeZone(vm.getDate());
 			self.getSunTimes(vm.getDate());
@@ -75,11 +93,13 @@ Place.prototype.getGeocodeInfo = function(data) {
 	});
 };
 
+/* Calculate local sun times */
 Place.prototype.getSunTimes = function(time) {
 	this.sun = SunCalc.getTimes(time, this.latLng().lat(), this.latLng().lng());
 	this.buildContent();
 };
 
+/* Get locale weather data */
 Place.prototype.getWeather = function() {
 	var self = this;
 	/* Use an API to get weather info*/
@@ -91,6 +111,7 @@ Place.prototype.getWeather = function() {
 
 };
 
+/* Get locale timezone information */
 Place.prototype.getTimeZone = function(time) {
 	var self = this;
 	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + time.getTime()/1000 + '&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek';
@@ -107,16 +128,7 @@ Place.prototype.buildContent = function() {
 	this.content = contentTemplate.start;
 	this.content += contentTemplate.name.replace('%text%', this.name);
 
-	/* Use google streetview image if no place photo exists
-	if (!this.photoUrl) {
-		this.photoUrl = 'https://maps.googleapis.com/maps/api/streetview?fov=120&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek&size=' +
-			INFO_PHOTO.maxWidth + 'x' + INFO_PHOTO.maxHeight + '&location=' + this.address;
-	}
-
-	this.content += contentTemplate.photo.replace('%src%', this.photoUrl).replace('%alt%', 'Photo of ' + this.name);
-	*/
-
-	if (this.hasOwnProperty('sun')) {
+	if (this.sun) {
 		var options = {timeZone: 'UTC'};
 		var timeZoneName = 'UTC';
 
@@ -135,7 +147,7 @@ Place.prototype.buildContent = function() {
 	this.infoWindow.setContent(this.content);
 };
 
-/* Use latLng data to create map marker and get additional details */
+/* Use latLng data to create map marker */
 Place.prototype.createMarker = function() {
 	var self = this;
 
@@ -147,10 +159,10 @@ Place.prototype.createMarker = function() {
 		draggable: true
 	});
 
-	/* Remove marker from map if place not active */
+	/* Remove marker from map if place not active otherwise set selected to display marker */
 	if (!self.active()) {
 		self.marker.setMap(null);
-	} else {
+	} else if (self.status == 'deselected') {
 		self.toggleSelected();
 	}
 
@@ -159,14 +171,17 @@ Place.prototype.createMarker = function() {
 		self.toggleSelected();
 	});
 
+	/* Allow user to change place/route by dragging marker */
 	self.marker.addListener('dragend', function(evt) {
 		self.resetLatLng(evt.latLng);
 	});
 
 };
 
+/* Reset LatLng dependent attributes with new Latlng */
 Place.prototype.resetLatLng = function(latLng) {
 	var self = this;
+
 	self.latLng(latLng);
 	self.content = 'Loading...';
 	self.getGeocodeInfo({latLng: self.latLng()});
@@ -176,9 +191,6 @@ Place.prototype.activate = function() {
 	if (!this.active()) {
 		this.active(true);
 		this.marker.setMap(map);
-		if (this.status == 'selected') {
-			this.marker.setAnimation(google.maps.Animation.BOUNCE);
-		}
 	}
 };
 
@@ -204,27 +216,25 @@ Place.prototype.toggleSelected = function() {
 	}
 };
 
-Place.prototype.deselect = function() {
-	this.status ='deselected';
+/***************************/
+/****** Journey Class ******/
+/***************************/
+var Journey = function() {
+	this.startPlace = ko.observable({});
+	this.finishPlace = ko.observable({});
 };
 
-Place.prototype.displayText = function() {
-	/* Display address if available */
-	if (this.address()) {
-		return this.address();
-	} else if (this.latLngOut) {
-		return this.latLngOut;
-	}
-};
-
-
-var Journey = function(data, route) {
+Journey.prototype.loadRoute = function(route) {
 	this.route = route;
 	directionsDisplay.setDirections(route);
 };
 
+/************************/
+/****** View Model ******/
+/************************/
 var viewModel = function() {
 	vm = this;
+	vm.journey = ko.observable(new Journey());
 
 	/* Increase map zoom level on large displays */
 	if (window.matchMedia('(min-width: 700px)').matches) {
@@ -239,13 +249,14 @@ var viewModel = function() {
 		if (position) {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 			
-			map.setCenter(latLng);
-			vm.startPlace(new Place({name: 'Start', latLng: latLng}));
+			map.setCenter(latLng);		
+			vm.journey().startPlace(new Place({name: 'Start', latLng: latLng}));
+			vm.showAlert(false);
 		}
 	};
 
 	vm.loadStart = function() {
-		vm.startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
+		vm.journey().startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
 	};
 
 	if (navigator.geolocation) {
@@ -253,35 +264,6 @@ var viewModel = function() {
 	} else {
 		alert('Browser not supported');
 	}
-
-	vm.startPlace = ko.observable();
-	vm.startPlaceField = ko.computed({
-		read: function(){
-			/* Remove alert window if place looks valid and therfore map should be loaded*/ 
-			if (vm.startPlace() && vm.startPlace().latLng() && vm.showAlert()) {
-				vm.showAlert(false);
-			}
-
-			if (vm.startPlace()) {
-				return vm.startPlace().displayText();
-			}
-		},
-		write: function(){
-		},
-		owner: this
-	});
-
-	vm.finishPlace = ko.observable();
-	vm.finishPlaceField = ko.computed({
-		read: function(){
-			if (vm.finishPlace()) {
-				return vm.finishPlace().displayText();
-			}
-		},
-		write: function(){
-		},
-		owner: this
-	});
 
 	vm.getDate = function() {
 		if (vm.date && vm.date()) {
@@ -308,41 +290,46 @@ var viewModel = function() {
 
 	/* Call function depending on status of the search button */
 	vm.submitStart = function() {
-		if (vm.startPlace()) {
-			vm.startPlace().deactivate();
+		if (vm.journey().startPlace().marker) {
+			vm.journey().startPlace().deactivate();
 		}
-		vm.startPlace(new Place({address: $('.start .field')[0].value, name: 'Start'}));
+		vm.journey().startPlace(new Place({address: $('.start .field')[0].value, name: 'Start'}));
 	};
 
 	vm.submitFinish = function() {
-		if (vm.finishPlace()) {
-			vm.finishPlace().deactivate();
+		if (vm.journey().finishPlace().marker) {
+			vm.journey().finishPlace().deactivate();
 		}
-		vm.finishPlace(new Place({address: $('.finish .field')[0].value, name: 'Finish'}));
+		vm.journey().finishPlace(new Place({address: $('.finish .field')[0].value, name: 'Finish'}));
 	};
 
-	vm.journey = ko.observable(null);
-
-	vm.getJourney = ko.computed(function() {
-		if (vm.startPlace() && vm.finishPlace() && vm.startPlace().latLng() && vm.finishPlace().latLng()) {
+	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
+	vm.getRoute = ko.computed(function() {
+		if (vm.journey().startPlace().latLng && vm.journey().finishPlace().latLng && vm.journey().startPlace().latLng() && vm.journey().finishPlace().latLng()) {
 			var data = {
-				origin: vm.startPlace().latLng(),
-				destination: vm.finishPlace().latLng(),
+				origin: vm.journey().startPlace().latLng(),
+				destination: vm.journey().finishPlace().latLng(),
 				travelMode: google.maps.TravelMode.DRIVING
 			};
 			
 			directionsService.route(data, function(result, status) {
 				if (status == google.maps.DirectionsStatus.OK) {
-					vm.journey(new Journey(data, result));		
+					vm.journey().loadRoute(result);		
+				} else {
+					alert('Directions unavailable: ' + status);
+					if (vm.journey().route) {
+						delete vm.journey().route;
+						directionsDisplay.set('directions', null);
+					}
 				}
 			});
 		}
 	});
 
 	vm.dayLength = ko.computed(function(){
-		if (!(vm.journey() == null) && vm.startPlace().sun && vm.finishPlace().sun) {
+		if (vm.journey().route && vm.journey().startPlace().sun && vm.journey().finishPlace().sun) {
 			$('.info').toggleClass('hidden', false);
-			return (vm.finishPlace().sun.sunset.getTime() - vm.startPlace().sun.sunset.getTime()) / 60000;
+			return (vm.journey().finishPlace().sun.sunset.getTime() - vm.journey().startPlace().sun.sunset.getTime()) / 60000;
 		}
 	});
 

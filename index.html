@@ -14,14 +14,14 @@
             <section class="search">
                 <div class="start row">
                     <div class="label">Start</div>
-                    <input type="text" class="field" data-bind="value: startPlaceField">
+                    <input type="text" class="field" data-bind="value: journey().startPlace().displayText">
                     <div class="row">
                         <button type="button" class="button" data-bind="click: submitStart">Submit</button>
                     </div>
                 </div>
                 <div class="finish row">
                     <div class="label">Finish</div>
-                    <input type="text" class="field" data-bind="value: finishPlaceField">
+                    <input type="text" class="field" data-bind="value: journey().finishPlace().displayText">
                     <div class="row">
                         <button type="button" class="button" data-bind="click: submitFinish">Submit</button>
                     </div>
