@@ -21,6 +21,7 @@ var Place = function(data) {
 
 	self.address = ko.observable();
 	self.latLng = ko.observable();
+	self.time = new Date();
 
 	/* Display latLng if no address */
 	self.displayText = ko.computed({
@@ -75,10 +76,10 @@ Place.prototype.getGeocodeInfo = function(data) {
 			self.latLngDisplay = self.latLng().lat().toString().slice(0,9);
 			self.latLngDisplay += ', ' + self.latLng().lng().toString().slice(0,9);
 
-			self.getTimeZone(vm.getDate());
-			self.getSunTimes(vm.getDate());
 			self.getWeather();
-			
+
+			/* Run methods dependent on time, but don't change time */
+			self.setTime();
 
 			if (self.marker) {
 				self.marker.setPosition(self.latLng());
@@ -93,12 +94,6 @@ Place.prototype.getGeocodeInfo = function(data) {
 	});
 };
 
-/* Calculate local sun times */
-Place.prototype.getSunTimes = function(time) {
-	this.sun = SunCalc.getTimes(time, this.latLng().lat(), this.latLng().lng());
-	this.buildContent();
-};
-
 /* Get locale weather data */
 Place.prototype.getWeather = function() {
 	var self = this;
@@ -111,10 +106,16 @@ Place.prototype.getWeather = function() {
 
 };
 
+/* Calculate local sun times */
+Place.prototype.getSunTimes = function() {
+	this.sun = SunCalc.getTimes(this.time, this.latLng().lat(), this.latLng().lng());
+	this.buildContent();
+};
+
 /* Get locale timezone information */
-Place.prototype.getTimeZone = function(time) {
+Place.prototype.getTimeZone = function() {
 	var self = this;
-	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + time.getTime()/1000 + '&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek';
+	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + self.time.getTime()/1000 + '&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek';
 	$.getJSON(url, function(results){
 		if (results.status == 'OK') {
 			self.timeZone = results;
@@ -122,6 +123,16 @@ Place.prototype.getTimeZone = function(time) {
 		}
 	});
 };
+
+Place.prototype.setTime = function(newTime) {
+	this.time = newTime || this.time;
+
+	if (this.latLng()) {
+		this.getTimeZone();
+		this.getSunTimes();
+	}
+};
+
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
@@ -219,14 +230,26 @@ Place.prototype.toggleSelected = function() {
 /***************************/
 /****** Journey Class ******/
 /***************************/
-var Journey = function() {
-	this.startPlace = ko.observable({});
-	this.finishPlace = ko.observable({});
+var Journey = function(start, finish) {
+	this.startPlace = start || ko.observable({});
+	this.finishPlace = finish || ko.observable({});
 };
 
 Journey.prototype.loadRoute = function(route) {
 	this.route = route;
 	directionsDisplay.setDirections(route);
+	this.finishPlace().time = new Date(this.startPlace().time.getTime() + this.getTravelTime());
+};
+
+Journey.prototype.getTravelTime = function() {
+	if (this.hasOwnProperty('route')) {
+		var travelTime = 0;
+		var legs = this.route.routes[0].legs;
+		for (var i = 0; i < legs.length; i++) {
+			travelTime += legs[i].duration.value * 1000;
+		}
+		return travelTime;
+	}
 };
 
 /************************/
@@ -245,6 +268,10 @@ var viewModel = function() {
 	vm.alertMessage = ko.observable('Allow geolocation or enter starting location:');
 	$('.alert-window .field').focus();
 
+	vm.inputStart = function() {
+		vm.journey().startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
+	};
+
 	vm.getStartLocation = function(position) {
 		if (position) {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
@@ -255,23 +282,11 @@ var viewModel = function() {
 		}
 	};
 
-	vm.loadStart = function() {
-		vm.journey().startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
-	};
-
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(vm.getStartLocation);
 	} else {
 		alert('Browser not supported');
 	}
-
-	vm.getDate = function() {
-		if (vm.date && vm.date()) {
-			return vm.date();
-		} else {
-			return new Date();
-		}
-	};
 
 	vm.menuStatus = ko.observable('closed');
 
