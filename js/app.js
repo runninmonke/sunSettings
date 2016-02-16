@@ -21,7 +21,6 @@ var Place = function(data) {
 
 	self.address = ko.observable();
 	self.latLng = ko.observable();
-	self.time = new Date();
 
 	/* Display latLng if no address */
 	self.displayText = ko.computed({
@@ -39,13 +38,7 @@ var Place = function(data) {
 	});
 
 	self.active = ko.observable(true);
-	self.status = 'deselected';
 
-	/* Loading message in case content is slow to build */
-	self.content = 'Loading...';
-
-	self.infoWindow = new google.maps.InfoWindow();
-	
 	/* Assigns to observable if it exists, otherwise regular assignment */
 	for (var item in data) {
 		if (data.hasOwnProperty(item)) {
@@ -53,13 +46,24 @@ var Place = function(data) {
 		}
 	}
 
-	/* Get missing address or LatLng. Skip to creating marker if both already present */
+	self.status = 'deselected';
+
+	self.time = new Date();
+
+	/* Loading message in case content is slow to build */
+	self.content = 'Loading...';
+
+	self.infoWindow = new google.maps.InfoWindow();
+	
+
+	/* Get missing address or LatLng and then additional data*/
 	if (!self.latLng() && self.address()) {
 		self.getGeocodeInfo({address: self.address()});
 	} else if (self.latLng() && !self.address()) {
 		self.getGeocodeInfo({latLng: self.latLng()});
+		self.useLatLngForInfo();
 	} else {
-		self.createMarker();
+		self.useLatLngForInfo();
 	}
 };
 
@@ -71,27 +75,34 @@ Place.prototype.getGeocodeInfo = function(data) {
 	geocoder.geocode(data, function(results, status) {
 		if (status == google.maps.GeocoderStatus.OK) {
 			self.address(results[0].formatted_address);
-			self.latLng(results[0].geometry.location);
-
-			self.latLngDisplay = self.latLng().lat().toString().slice(0,9);
-			self.latLngDisplay += ', ' + self.latLng().lng().toString().slice(0,9);
-
-			self.getWeather();
-
-			/* Run methods dependent on time, but don't change time */
-			self.setTime();
-
-			if (self.marker) {
-				self.marker.setPosition(self.latLng());
-			} else {
-				self.createMarker();
+			if (!self.latLng()) {
+				self.latLng(results[0].geometry.location);
+				self.useLatLngForInfo();
 			}
-
-			map.setCenter(self.latLng());
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
 		}
 	});
+};
+
+Place.prototype.useLatLngForInfo = function () {
+	var self = this;
+
+	self.latLngDisplay = self.latLng().lat().toString().slice(0,9);
+	self.latLngDisplay += ', ' + self.latLng().lng().toString().slice(0,9);
+
+	self.getWeather();
+
+	/* Run methods dependent on time, but don't change time */
+	self.setTime();
+
+	if (self.marker) {
+		self.marker.setPosition(self.latLng());
+	} else {
+		self.createMarker();
+	}
+
+	map.setCenter(self.latLng());
 };
 
 /* Get locale weather data */
