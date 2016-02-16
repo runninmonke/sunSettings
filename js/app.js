@@ -237,8 +237,11 @@ var Journey = function(start, finish) {
 
 Journey.prototype.loadRoute = function(route) {
 	this.route = route;
+	this.route.notFromDrag = true;
+
 	directionsDisplay.setDirections(route);
-	this.finishPlace().time = new Date(this.startPlace().time.getTime() + this.getTravelTime());
+
+	this.finishPlace().setTime(new Date(this.startPlace().time.getTime() + this.getTravelTime()));
 };
 
 Journey.prototype.getTravelTime = function() {
@@ -341,6 +344,14 @@ var viewModel = function() {
 		}
 	});
 
+	directionsDisplay.addListener('directions_changed', function() {
+		var directionsRoute = directionsDisplay.getDirections();
+
+		if (!directionsRoute.hasOwnProperty('notFromDrag')) {
+			vm.journey().loadRoute(directionsRoute);
+		}
+	});
+
 	vm.dayLength = ko.computed(function(){
 		if (vm.journey().route && vm.journey().startPlace().sun && vm.journey().finishPlace().sun) {
 			$('.info').toggleClass('hidden', false);
@@ -406,7 +417,8 @@ var initMap = function() {
 
 	/* Direction services */
 	directionsService = new google.maps.DirectionsService();
-	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true});
+	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true});
+
 	/* Initiate the View-model */
 	ko.applyBindings(new viewModel());
 };
