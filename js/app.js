@@ -23,7 +23,7 @@ var Place = function(data) {
 	self.latLng = ko.observable();
 
 	/* Display latLng if no address */
-	self.displayText = ko.computed({
+	self.displayReadWrite = ko.computed({
 		read: function() {
 			/* Display address if available */
 			if (this.address) {
@@ -33,6 +33,7 @@ var Place = function(data) {
 			}
 		},
 		write: function(){
+			self.setAddress($('.' + self.name.toLowerCase() + ' .field')[0].value);
 		},
 		owner: this
 	});
@@ -62,8 +63,35 @@ var Place = function(data) {
 	} else if (self.latLng() && !self.address()) {
 		self.getGeocodeInfo({latLng: self.latLng()});
 		self.useLatLngForInfo();
-	} else {
+	} else if (self.latLng()) {
 		self.useLatLngForInfo();
+	}
+};
+
+/* Reset LatLng dependent attributes with new Latlng */
+Place.prototype.setLatLng = function(latLng) {
+	this.reset();
+
+	this.latLng(latLng);
+	this.getGeocodeInfo({latLng: latLng});
+	this.useLatLngForInfo();
+};
+
+Place.prototype.setAddress = function(address) {
+	this.reset();
+
+	this.address(address);
+	this.getGeocodeInfo({address: address});
+};
+
+Place.prototype.reset = function() {
+	this.latLng(undefined);
+	this.address(undefined);
+	this.content = 'Loading...';
+	this.status = 'deselected';
+
+	if (this.marker) {
+		this.deactivate();
 	}
 };
 
@@ -195,19 +223,9 @@ Place.prototype.createMarker = function() {
 
 	/* Allow user to change place/route by dragging marker */
 	self.marker.addListener('dragend', function(evt) {
-		self.resetLatLng(evt.latLng);
+		self.setLatLng(evt.latLng);
 	});
 
-};
-
-/* Reset LatLng dependent attributes with new Latlng */
-Place.prototype.resetLatLng = function(latLng) {
-	var self = this;
-
-	self.latLng(latLng);
-	self.content = 'Loading...';
-	self.getGeocodeInfo({latLng: self.latLng()});
-	self.useLatLngForInfo();
 };
 
 Place.prototype.activate = function() {
@@ -243,8 +261,8 @@ Place.prototype.toggleSelected = function() {
 /****** Journey Class ******/
 /***************************/
 var Journey = function(start, finish) {
-	this.startPlace = start || ko.observable({});
-	this.finishPlace = finish || ko.observable({});
+	this.startPlace = start;
+	this.finishPlace = finish;
 };
 
 Journey.prototype.loadRoute = function(route) {
@@ -264,6 +282,8 @@ Journey.prototype.getTravelTime = function() {
 			travelTime += legs[i].duration.value * 1000;
 		}
 		return travelTime;
+	} else {
+		return 0;
 	}
 };
 
@@ -272,7 +292,9 @@ Journey.prototype.getTravelTime = function() {
 /************************/
 var viewModel = function() {
 	vm = this;
-	vm.journey = ko.observable(new Journey());
+	vm.startPlace = ko.observable(new Place({name: 'Start'}));
+	vm.finishPlace = ko.observable(new Place({name: 'Finish'}));
+	vm.journey = ko.observable();
 
 	/* Increase map zoom level on large displays */
 	if (window.matchMedia('(min-width: 700px)').matches) {
@@ -284,7 +306,8 @@ var viewModel = function() {
 	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
-		vm.journey().startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
+		vm.startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
+		vm.showAlert(false);
 	};
 
 	vm.getStartLocation = function(position) {
@@ -292,7 +315,7 @@ var viewModel = function() {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 			
 			map.setCenter(latLng);		
-			vm.journey().startPlace(new Place({name: 'Start', latLng: latLng}));
+			vm.startPlace(new Place({name: 'Start', latLng: latLng}));
 			vm.showAlert(false);
 		}
 	};
@@ -318,27 +341,14 @@ var viewModel = function() {
 
 	vm.openMenu();
 
-	/* Call function depending on status of the search button */
-	vm.submitStart = function() {
-		if (vm.journey().startPlace().marker) {
-			vm.journey().startPlace().deactivate();
-		}
-		vm.journey().startPlace(new Place({address: $('.start .field')[0].value, name: 'Start'}));
-	};
-
-	vm.submitFinish = function() {
-		if (vm.journey().finishPlace().marker) {
-			vm.journey().finishPlace().deactivate();
-		}
-		vm.journey().finishPlace(new Place({address: $('.finish .field')[0].value, name: 'Finish'}));
-	};
-
 	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
-	vm.getRoute = ko.computed(function() {
-		if (vm.journey().startPlace().latLng && vm.journey().finishPlace().latLng && vm.journey().startPlace().latLng() && vm.journey().finishPlace().latLng()) {
+	vm.getJourney = ko.computed(function() {
+		if (vm.startPlace().latLng() && vm.finishPlace().latLng()) {
+			vm.journey(new Journey(vm.startPlace, vm.finishPlace));
+
 			var data = {
-				origin: vm.journey().startPlace().latLng(),
-				destination: vm.journey().finishPlace().latLng(),
+				origin: vm.startPlace().latLng(),
+				destination: vm.finishPlace().latLng(),
 				travelMode: google.maps.TravelMode.DRIVING
 			};
 			
@@ -365,11 +375,11 @@ var viewModel = function() {
 	});
 
 	vm.dayLength = ko.computed(function(){
-		if (vm.journey().route && vm.journey().startPlace().sun && vm.journey().finishPlace().sun) {
+	/*	if (vm.journey() && vm.startPlace().sun && vm.finishPlace().sun) {
 			$('.info').toggleClass('hidden', false);
-			return (vm.journey().finishPlace().sun.sunset.getTime() - vm.journey().startPlace().sun.sunset.getTime()) / 60000;
-		}
-	});
+			return (vm.finishPlace().sun.sunset.getTime() - vm.startPlace().sun.sunset.getTime()) / 60000;
+	*/	}
+	);
 
 	/* Variables for weather section display */
 	vm.conditionImg = ko.observable('');
