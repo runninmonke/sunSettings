@@ -207,6 +207,7 @@ Place.prototype.resetLatLng = function(latLng) {
 	self.latLng(latLng);
 	self.content = 'Loading...';
 	self.getGeocodeInfo({latLng: self.latLng()});
+	self.useLatLngForInfo();
 };
 
 Place.prototype.activate = function() {
