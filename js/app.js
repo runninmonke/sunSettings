@@ -23,7 +23,7 @@ var Place = function(data) {
 	self.latLng = ko.observable();
 
 	/* Display latLng if no address */
-	self.displayReadWrite = ko.computed({
+	self.displayRead = ko.computed({
 		read: function() {
 			/* Display address if available */
 			if (this.address) {
@@ -33,10 +33,19 @@ var Place = function(data) {
 			}
 		},
 		write: function(){
+		},
+		owner: this
+	});
+
+	self.displayWrite = ko.computed({
+		read: function() {
+		},
+		write: function(){
 			self.setAddress($('.' + self.name.toLowerCase() + ' .field')[0].value);
 		},
 		owner: this
 	});
+
 
 	self.active = ko.observable(true);
 
@@ -91,11 +100,12 @@ Place.prototype.reset = function() {
 	this.status = 'deselected';
 
 	if (this.marker) {
-		this.deactivate();
+		this.marker.setMap(null);
+		delete this.marker;		
 	}
 };
 
-/* Populate properties with Geocoderesults, add a marker and try to get additional details via a series of AJAX requests. */
+/* Populate properties with Geocoderesults */
 Place.prototype.getGeocodeInfo = function(data) {
 	var self = this;
 
@@ -135,14 +145,14 @@ Place.prototype.useLatLngForInfo = function () {
 
 /* Get locale weather data */
 Place.prototype.getWeather = function() {
-	var self = this;
+//	var self = this;
 	/* Use an API to get weather info*/
-	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + self.latLng().lat() + ',' + self.latLng().lng(), function(results) {
+/*	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + self.latLng().lat() + ',' + self.latLng().lng(), function(results) {
 		self.weather = results;
 	}).fail(function() {
 		alert('Weather data not available');
 	});
-
+*/
 };
 
 /* Calculate local sun times */
@@ -228,23 +238,6 @@ Place.prototype.createMarker = function() {
 
 };
 
-Place.prototype.activate = function() {
-	if (!this.active()) {
-		this.active(true);
-		this.marker.setMap(map);
-	}
-};
-
-Place.prototype.deactivate = function() {
-	if (this.active()) {
-		this.active(false);
-	}
-	if (this.hasOwnProperty('marker')) {
-		this.marker.setMap(null);
-	}
-};
-
-
 Place.prototype.toggleSelected = function() {
 	if (this.status =='selected') {
 		this.status ='deselected';
@@ -263,6 +256,17 @@ Place.prototype.toggleSelected = function() {
 var Journey = function(start, finish) {
 	this.startPlace = start;
 	this.finishPlace = finish;
+	this.sunEvents = [];
+};
+
+Journey.prototype.getRoute = function(origin, destination, callback) {
+	var data = {
+		origin: origin,
+		destination: destination,
+		travelMode: google.maps.TravelMode.DRIVING
+	};
+	
+	directionsService.route(data, callback);
 };
 
 Journey.prototype.loadRoute = function(route) {
@@ -272,6 +276,108 @@ Journey.prototype.loadRoute = function(route) {
 	directionsDisplay.setDirections(route);
 
 	this.finishPlace().setTime(new Date(this.startPlace().time.getTime() + this.getTravelTime()));
+
+	this.analyzeRoute();
+};
+
+Journey.prototype.analyzeRoute = function() {
+	var self = this;
+	var eventsOfInterest = ['sunrise', 'sunset'];
+
+	var locationTime = new Date(this.startPlace().time.getTime());
+	var nextLocationTime = new Date(locationTime.getTime());
+	var sunEventTime = new Date(locationTime.getTime());
+	var sunEventName;
+
+	var path = this.route.routes[0].legs[0].steps;
+	var locationSunTimes = SunCalc.getTimes(sunEventTime, path[0].start_location.lat(), path[0].start_location.lng());
+
+
+	var findNextSunEvent = function(lastSunTime) {
+		var potentialTimes = [];
+
+		/* Check for sun events that have yet to occur */
+		for (var i = 0; i < eventsOfInterest.length; i++) {
+			if (locationSunTimes[eventsOfInterest[i]].getTime() > lastSunTime) {
+				potentialTimes.push({time: locationSunTimes[eventsOfInterest[i]], name: eventsOfInterest[i]});
+			}
+		}
+
+		/* Find sun event yet to occur that will occur soonest */
+		var minTime = 99999999999999;
+		var iTime;
+
+		for (var i = 0; i < potentialTimes.length; i++) {
+			iTime = potentialTimes[i].time.getTime();
+			if (iTime < minTime) {
+				minTime = iTime;
+				sunEventTime.setTime(iTime);
+				sunEventName = potentialTimes[i].name;
+				//console.log(sunEventTime, new Date(lastSunTime));
+			}
+		}
+
+		/* If no results, add 24 hours to the time the sun events are calculated from and re-try */
+		if (potentialTimes.length == 0) {
+			sunEventTime.setTime(sunEventTime.getTime() + 86400000);
+			locationSunTimes = SunCalc.getTimes(sunEventTime, path[0].start_location.lat(), path[0].start_location.lng());
+			findNextSunEvent(lastSunTime);
+		}
+	};
+
+	var placeSunEvent = function(pathSection) {
+		var timeTilSunEvent = sunEventTime.getTime() - locationTime.getTime();
+		var eventRatioEstimate = timeTilSunEvent / (nextLocationTime.getTime() - locationTime.getTime());
+		var eventLocationEstimate = pathSection.length * eventRatioEstimate;
+		eventLocationEstimate = Math.round(eventLocationEstimate);
+
+		var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
+
+		var sunEvent = new Place({name: sunEventDisplayName, latLng: pathSection[eventLocationEstimate]});
+		self.sunEvents.push(sunEvent);
+
+		var directionsCallback = function(result, status) {
+			if (status == 'OK') {
+				console.log('!', new Date(self.startPlace().time.getTime() + result.routes[0].legs[0].duration.value * 1000), sunEvent.sun[sunEventDisplayName.toLowerCase()]);
+			} else {
+				console.log(status);
+			}
+		};
+
+		self.getRoute(self.startPlace().latLng(), sunEvent.latLng(), directionsCallback);
+	};
+
+	findNextSunEvent(locationTime.getTime());
+	
+	var reachEnd;
+	for (var j = 0; j < 5; j++) {
+		reachEnd = true;
+		for (var i = 0; i < path.length; i++) {
+			/* Determine time at end of path */
+			nextLocationTime.setTime(locationTime.getTime() + (path[i].duration.value * 1000));
+
+			/* Refine sun event times based on new location */
+			sunEventTime = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng())[sunEventName];
+			locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
+
+			if (sunEventTime.getTime() < nextLocationTime.getTime()) {
+				placeSunEvent(path[i].path);
+				path = path.slice(i);
+				reachEnd = false;
+				break;
+			} else {
+				locationTime.setTime(nextLocationTime.getTime());
+			}
+		}
+
+		if (reachEnd) {
+			break;
+		}
+
+
+		findNextSunEvent(sunEventTime.getTime());
+	}
+
 };
 
 Journey.prototype.getTravelTime = function() {
@@ -315,7 +421,7 @@ var viewModel = function() {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 			
 			map.setCenter(latLng);		
-			vm.startPlace(new Place({name: 'Start', latLng: latLng}));
+			vm.startPlace().setLatLng(latLng);
 			vm.showAlert(false);
 		}
 	};
@@ -341,28 +447,24 @@ var viewModel = function() {
 
 	vm.openMenu();
 
+	vm.directionsCallback = function(result, status) {
+		if (status == google.maps.DirectionsStatus.OK) {
+			vm.journey().loadRoute(result);		
+		} else {
+			alert('Directions unavailable: ' + status);
+			if (vm.journey().route) {
+				delete vm.journey().route;
+				directionsDisplay.set('directions', null);
+			}
+		}
+	};
+
 	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
 	vm.getJourney = ko.computed(function() {
 		if (vm.startPlace().latLng() && vm.finishPlace().latLng()) {
 			vm.journey(new Journey(vm.startPlace, vm.finishPlace));
 
-			var data = {
-				origin: vm.startPlace().latLng(),
-				destination: vm.finishPlace().latLng(),
-				travelMode: google.maps.TravelMode.DRIVING
-			};
-			
-			directionsService.route(data, function(result, status) {
-				if (status == google.maps.DirectionsStatus.OK) {
-					vm.journey().loadRoute(result);		
-				} else {
-					alert('Directions unavailable: ' + status);
-					if (vm.journey().route) {
-						delete vm.journey().route;
-						directionsDisplay.set('directions', null);
-					}
-				}
-			});
+			vm.journey().getRoute(vm.startPlace().latLng(), vm.finishPlace().latLng(), vm.directionsCallback);
 		}
 	});
 
