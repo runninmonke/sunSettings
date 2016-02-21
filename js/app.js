@@ -414,6 +414,11 @@ var viewModel = function() {
 	vm.inputStart = function() {
 		vm.startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
 		vm.showAlert(false);
+
+		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
+		autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0]);
+		autocompleteStart.bindTo('bounds', map);
+
 	};
 
 	vm.getStartLocation = function(position) {
