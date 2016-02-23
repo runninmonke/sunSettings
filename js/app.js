@@ -68,9 +68,9 @@ var Place = function(data) {
 
 	/* Get missing address or LatLng and then additional data*/
 	if (!self.latLng() && self.address()) {
-		self.getGeocodeInfo({address: self.address()});
+		self.getGeocodeInfo();
 	} else if (self.latLng() && !self.address()) {
-		self.getGeocodeInfo({latLng: self.latLng()});
+		self.getGeocodeInfo();
 		self.useLatLngForInfo();
 	} else if (self.latLng()) {
 		self.useLatLngForInfo();
@@ -82,7 +82,7 @@ Place.prototype.setLatLng = function(latLng) {
 	this.reset();
 
 	this.latLng(latLng);
-	this.getGeocodeInfo({latLng: latLng});
+	this.getGeocodeInfo();
 	this.useLatLngForInfo();
 };
 
@@ -90,7 +90,7 @@ Place.prototype.setAddress = function(address) {
 	this.reset();
 
 	this.address(address);
-	this.getGeocodeInfo({address: address});
+	this.getGeocodeInfo();
 };
 
 Place.prototype.reset = function() {
@@ -106,17 +106,27 @@ Place.prototype.reset = function() {
 };
 
 /* Populate properties with Geocoderesults */
-Place.prototype.getGeocodeInfo = function(data) {
+Place.prototype.getGeocodeInfo = function() {
 	var self = this;
+	var data;
+
+	if (self.latLng()) {
+		data = {latLng: self.latLng()};
+	} else if (self.address()) {
+		data = {address: self.address()};
+	}
 
 	/* Request geocoder info and then call all functions dependent on the results */
 	geocoder.geocode(data, function(results, status) {
-		if (status == google.maps.GeocoderStatus.OK) {
+		if (status == 'OK') {
 			self.address(results[0].formatted_address);
 			if (!self.latLng()) {
 				self.latLng(results[0].geometry.location);
 				self.useLatLngForInfo();
 			}
+		} else if (status == 'OVER_QUERY_LIMIT') {
+			setTimeout(function(){self.getGeocodeInfo()}, 1000);
+			console.log('over_query_limit');
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
 		}
@@ -334,6 +344,7 @@ Journey.prototype.analyzeRoute = function() {
 		var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
 
 		var sunEvent = new Place({name: sunEventDisplayName, latLng: pathSection[eventLocationEstimate]});
+		console.log(pathSection[eventLocationEstimate]);	
 		self.sunEvents.push(sunEvent);
 
 		var directionsCallback = function(result, status) {
@@ -350,24 +361,24 @@ Journey.prototype.analyzeRoute = function() {
 	findNextSunEvent(locationTime.getTime());
 	
 	var reachEnd;
-	for (var j = 0; j < 5; j++) {
+	while (path.length > 0) {
 		reachEnd = true;
 		for (var i = 0; i < path.length; i++) {
 			/* Determine time at end of path */
 			nextLocationTime.setTime(locationTime.getTime() + (path[i].duration.value * 1000));
-
-			/* Refine sun event times based on new location */
-			sunEventTime = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng())[sunEventName];
-			locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
 
 			if (sunEventTime.getTime() < nextLocationTime.getTime()) {
 				placeSunEvent(path[i].path);
 				path = path.slice(i);
 				reachEnd = false;
 				break;
-			} else {
-				locationTime.setTime(nextLocationTime.getTime());
 			}
+
+			locationTime.setTime(nextLocationTime.getTime());
+
+			/* Refine sun event time based on new location */
+			sunEventTime = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng())[sunEventName];
+			locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
 		}
 
 		if (reachEnd) {
