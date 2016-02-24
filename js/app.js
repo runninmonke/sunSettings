@@ -114,6 +114,8 @@ Place.prototype.getGeocodeInfo = function() {
 		data = {latLng: self.latLng()};
 	} else if (self.address()) {
 		data = {address: self.address()};
+	} else {
+		return;
 	}
 
 	/* Request geocoder info and then call all functions dependent on the results */
@@ -125,8 +127,7 @@ Place.prototype.getGeocodeInfo = function() {
 				self.useLatLngForInfo();
 			}
 		} else if (status == 'OVER_QUERY_LIMIT') {
-			setTimeout(function(){self.getGeocodeInfo()}, 1000);
-			console.log('over_query_limit');
+			setTimeout(function(){self.getGeocodeInfo();}, 1000);
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
 		}
@@ -290,6 +291,15 @@ Journey.prototype.loadRoute = function(route) {
 	this.analyzeRoute();
 };
 
+Journey.prototype.resetSunEvents = function() {
+	if (this.sunEvents) {
+		for (var i = 0; i < this.sunEvents.length; i++) {
+			this.sunEvents[i].reset();
+		}
+		this.sunEvents = [];
+	}
+};
+
 Journey.prototype.analyzeRoute = function() {
 	var self = this;
 	var eventsOfInterest = ['sunrise', 'sunset'];
@@ -344,7 +354,7 @@ Journey.prototype.analyzeRoute = function() {
 		var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
 
 		var sunEvent = new Place({name: sunEventDisplayName, latLng: pathSection[eventLocationEstimate]});
-		console.log(pathSection[eventLocationEstimate]);	
+
 		self.sunEvents.push(sunEvent);
 
 		var directionsCallback = function(result, status) {
@@ -357,6 +367,8 @@ Journey.prototype.analyzeRoute = function() {
 
 		self.getRoute(self.startPlace().latLng(), sunEvent.latLng(), directionsCallback);
 	};
+
+	self.resetSunEvents();
 
 	findNextSunEvent(locationTime.getTime());
 	
@@ -478,6 +490,11 @@ var viewModel = function() {
 	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
 	vm.getJourney = ko.computed(function() {
 		if (vm.startPlace().latLng() && vm.finishPlace().latLng()) {
+			if (vm.journey()) {
+				console.log('?');
+				vm.journey().resetSunEvents();
+			}
+
 			vm.journey(new Journey(vm.startPlace, vm.finishPlace));
 
 			vm.journey().getRoute(vm.startPlace().latLng(), vm.finishPlace().latLng(), vm.directionsCallback);
