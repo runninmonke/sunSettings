@@ -1,6 +1,9 @@
 /*global $, google, ko, SunCalc*/
 'use strict';
 
+/* Maximum times a SunPlace will refine it's location */
+var MAX_ATTEMPTS = 5;
+
 var timeFormatLocale = 'en-US';
 
 /*eslint-disable quotes*/
@@ -12,6 +15,16 @@ var contentTemplate = {
 	end: '</div>'
 };
 /*eslint-enable quotes*/
+
+var GetRoute = function(origin, destination, callback) {
+	var data = {
+		origin: origin,
+		destination: destination,
+		travelMode: google.maps.TravelMode.DRIVING
+	};
+	
+	directionsService.route(data, callback);
+};
 
 /*************************/
 /****** Place Class ******/
@@ -261,6 +274,51 @@ Place.prototype.toggleSelected = function() {
 	}
 };
 
+/****************************/
+/****** SunPlace Class ******/
+/****************************/
+
+var SunPlace = function(data) {
+	Place.call(this, data);
+	this.refineAttemps = 0;
+};
+
+SunPlace.prototype = Object.create(Place.prototype);
+SunPlace.prototype.constructor  = SunPlace;
+
+SunPlace.prototype.refineEstimate = function(pathSection, startTime, placeTime) {
+	var self = this;
+	self.time = new Date(placeTime);
+
+	/* Esimate location of sun event along path */
+	var eventLocationEstimate;
+	var previousEstimate = -2;
+	while(true) {
+		eventLocationEstimate = (self.time.getTime() - startTime) / (pathSection.duration.value * 1000);
+		eventLocationEstimate = Math.round(pathSection.path.length * eventLocationEstimate);
+
+		if (previousEstimate - eventLocationEstimate < 2 && previousEstimate - eventLocationEstimate > -2) {
+			break;
+		}
+
+		self.setLatLng(pathSection.path[eventLocationEstimate]);
+		self.time.setTime(self.sun[self.name.toLowerCase()].getTime());
+		
+		previousEstimate = eventLocationEstimate;
+	}
+
+	var directionsCallback = function(result, status) {
+		if (status == 'OK') {
+			var arrivalTime = new Date(startTime + result.routes[0].legs[0].duration.value * 1000);
+			console.log(self.time, arrivalTime);
+		} else {
+			console.log(status);
+		}
+	};
+
+	GetRoute(pathSection.start_location, self.latLng(), directionsCallback);
+};
+
 /***************************/
 /****** Journey Class ******/
 /***************************/
@@ -268,16 +326,6 @@ var Journey = function(start, finish) {
 	this.startPlace = start;
 	this.finishPlace = finish;
 	this.sunEvents = [];
-};
-
-Journey.prototype.getRoute = function(origin, destination, callback) {
-	var data = {
-		origin: origin,
-		destination: destination,
-		travelMode: google.maps.TravelMode.DRIVING
-	};
-	
-	directionsService.route(data, callback);
 };
 
 Journey.prototype.loadRoute = function(route) {
@@ -307,6 +355,7 @@ Journey.prototype.analyzeRoute = function() {
 	var locationTime = new Date(this.startPlace().time.getTime());
 	var nextLocationTime = new Date(locationTime.getTime());
 	var sunEventTime = new Date(locationTime.getTime());
+	var nextSunEventTime;
 	var sunEventName;
 
 	var path = this.route.routes[0].legs[0].steps;
@@ -345,52 +394,43 @@ Journey.prototype.analyzeRoute = function() {
 		}
 	};
 
-	var placeSunEvent = function(pathSection) {
-		var timeTilSunEvent = sunEventTime.getTime() - locationTime.getTime();
-		var eventRatioEstimate = timeTilSunEvent / (nextLocationTime.getTime() - locationTime.getTime());
-		var eventLocationEstimate = pathSection.length * eventRatioEstimate;
-		eventLocationEstimate = Math.round(eventLocationEstimate);
-
-		var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
-
-		var sunEvent = new Place({name: sunEventDisplayName, latLng: pathSection[eventLocationEstimate]});
-
-		self.sunEvents.push(sunEvent);
-
-		var directionsCallback = function(result, status) {
-			if (status == 'OK') {
-				console.log('!', new Date(self.startPlace().time.getTime() + result.routes[0].legs[0].duration.value * 1000), sunEvent.sun[sunEventDisplayName.toLowerCase()]);
-			} else {
-				console.log(status);
-			}
-		};
-
-		self.getRoute(self.startPlace().latLng(), sunEvent.latLng(), directionsCallback);
-	};
-
 	self.resetSunEvents();
 
 	findNextSunEvent(locationTime.getTime());
 	
+	/* Find next sun event on path and repeat until end is reached */
 	var reachEnd;
-	while (path.length > 0) {
+	while(path.length > 0) {
+		/* Check each section of path until next sun event is found */
 		reachEnd = true;
 		for (var i = 0; i < path.length; i++) {
-			/* Determine time at end of path */
 			nextLocationTime.setTime(locationTime.getTime() + (path[i].duration.value * 1000));
+			nextSunEventTime = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng())[sunEventName];
 
-			if (sunEventTime.getTime() < nextLocationTime.getTime()) {
-				placeSunEvent(path[i].path);
+			/* Set values for next iteration if no sunevent occurs during current section */
+			if (nextSunEventTime.getTime() > nextLocationTime.getTime()) {
+				locationTime.setTime(nextLocationTime.getTime());
+
+				sunEventTime.setTime(nextSunEventTime.getTime());
+				locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
+			} else {
+				/* One last conditional necessary to make sure we are using a sun event time that will occur during the travel time of the current section */
+				if (sunEventTime.getTime() > nextLocationTime.getTime()) {
+					sunEventTime.setTime(nextSunEventTime.getTime());
+					locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
+				}
+
+				/* Create sun event and call the estimation of its location*/
+				var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
+				var sunEvent = new SunPlace({name: sunEventDisplayName});
+				self.sunEvents.push(sunEvent);
+				sunEvent.refineEstimate(path[i], locationTime.getTime(), sunEventTime.getTime());
+
+				/* Remove path that has already been checked before next iteration */
 				path = path.slice(i);
 				reachEnd = false;
 				break;
 			}
-
-			locationTime.setTime(nextLocationTime.getTime());
-
-			/* Refine sun event time based on new location */
-			sunEventTime = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng())[sunEventName];
-			locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
 		}
 
 		if (reachEnd) {
@@ -497,7 +537,7 @@ var viewModel = function() {
 
 			vm.journey(new Journey(vm.startPlace, vm.finishPlace));
 
-			vm.journey().getRoute(vm.startPlace().latLng(), vm.finishPlace().latLng(), vm.directionsCallback);
+			GetRoute(vm.startPlace().latLng(), vm.finishPlace().latLng(), vm.directionsCallback);
 		}
 	});
 
