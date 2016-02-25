@@ -3,6 +3,8 @@
 
 /* Maximum times a SunPlace will refine it's location */
 var MAX_ATTEMPTS = 5;
+/* Maximum error in ms allowed for estimate to be considered accurate */
+var ESTIMATE_RANGE = 30000;
 
 var timeFormatLocale = 'en-US';
 
@@ -280,15 +282,16 @@ Place.prototype.toggleSelected = function() {
 
 var SunPlace = function(data) {
 	Place.call(this, data);
+	this.refined = false;
 	this.refineAttemps = 0;
 };
 
 SunPlace.prototype = Object.create(Place.prototype);
 SunPlace.prototype.constructor  = SunPlace;
 
-SunPlace.prototype.refineEstimate = function(pathSection, startTime, placeTime) {
+SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	var self = this;
-	self.time = new Date(placeTime);
+	self.refineAttemps++;
 
 	/* Esimate location of sun event along path */
 	var eventLocationEstimate;
@@ -301,7 +304,8 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime, placeTime) 
 			break;
 		}
 
-		self.setLatLng(pathSection.path[eventLocationEstimate]);
+		self.latLng(pathSection.path[eventLocationEstimate]);
+		self.getSunTimes();
 		self.time.setTime(self.sun[self.name.toLowerCase()].getTime());
 		
 		previousEstimate = eventLocationEstimate;
@@ -309,14 +313,49 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime, placeTime) 
 
 	var directionsCallback = function(result, status) {
 		if (status == 'OK') {
-			var arrivalTime = new Date(startTime + result.routes[0].legs[0].duration.value * 1000);
-			console.log(self.time, arrivalTime);
+			var steps = result.routes[0].legs[0].steps;
+			var newPathSection = {duration: {}, path: []};
+			newPathSection.duration.value = steps[0].duration.value;
+			newPathSection.path = steps[0].path.slice();
+			newPathSection.start_location = steps[0].start_location;
+
+
+			/* Include all steps if multiple were included */
+			for (var i = 1; i < steps.length; i++) {
+				newPathSection.duration.value += steps[i].duration.value;
+				for (var j = 0; j < steps[i].path.length; j++) {
+					newPathSection.path.push(steps[i].path[j]);
+				}
+			}
+
+			if (steps.length > 1) {
+				console.log('multi-step check:', steps, newPathSection);
+			}
+
+			var arrivalTime = startTime + newPathSection.duration.value * 1000;
+			if (self.time.getTime() - arrivalTime > ESTIMATE_RANGE) {
+				console.log('>');
+				newPathSection.path = pathSection.path.slice(eventLocationEstimate);
+				newPathSection.duration.value = pathSection.duration.value - newPathSection.duration.value;
+				self.refineEstimate(newPathSection, arrivalTime);
+			} else if (self.time.getTime() - arrivalTime < -ESTIMATE_RANGE) {
+				console.log('<');	
+				self.refineEstimate(newPathSection, startTime);
+			} else {
+				self.refined = true;
+				self.setLatLng(self.latLng());
+			}
+			console.log(self.time.getTime() - arrivalTime, self.time, new Date(arrivalTime));
 		} else {
 			console.log(status);
 		}
 	};
 
-	GetRoute(pathSection.start_location, self.latLng(), directionsCallback);
+	if (self.refineAttemps <= MAX_ATTEMPTS) {
+		GetRoute(pathSection.start_location, self.latLng(), directionsCallback);
+	} else {
+		self.setLatLng(self.latLng());
+	}
 };
 
 /***************************/
@@ -382,7 +421,6 @@ Journey.prototype.analyzeRoute = function() {
 				minTime = iTime;
 				sunEventTime.setTime(iTime);
 				sunEventName = potentialTimes[i].name;
-				//console.log(sunEventTime, new Date(lastSunTime));
 			}
 		}
 
@@ -407,7 +445,7 @@ Journey.prototype.analyzeRoute = function() {
 			nextLocationTime.setTime(locationTime.getTime() + (path[i].duration.value * 1000));
 			nextSunEventTime = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng())[sunEventName];
 
-			/* Set values for next iteration if no sunevent occurs during current section */
+			/* Set values for next iteration if no sun event occurs during current section */
 			if (nextSunEventTime.getTime() > nextLocationTime.getTime()) {
 				locationTime.setTime(nextLocationTime.getTime());
 
@@ -422,9 +460,10 @@ Journey.prototype.analyzeRoute = function() {
 
 				/* Create sun event and call the estimation of its location*/
 				var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
-				var sunEvent = new SunPlace({name: sunEventDisplayName});
+				var sunEvent = new SunPlace({name: sunEventDisplayName}); 
+				sunEvent.time = new Date(sunEventTime.getTime());
 				self.sunEvents.push(sunEvent);
-				sunEvent.refineEstimate(path[i], locationTime.getTime(), sunEventTime.getTime());
+				sunEvent.refineEstimate(path[i], locationTime.getTime());
 
 				/* Remove path that has already been checked before next iteration */
 				path = path.slice(i);
@@ -531,7 +570,6 @@ var viewModel = function() {
 	vm.getJourney = ko.computed(function() {
 		if (vm.startPlace().latLng() && vm.finishPlace().latLng()) {
 			if (vm.journey()) {
-				console.log('?');
 				vm.journey().resetSunEvents();
 			}
 
