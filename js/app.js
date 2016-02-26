@@ -300,6 +300,13 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 		eventLocationEstimate = (self.time.getTime() - startTime) / (pathSection.duration.value * 1000);
 		eventLocationEstimate = Math.round(pathSection.path.length * eventLocationEstimate);
 
+		/* Make sure estimated sun time doesn't leave path range */
+		if (eventLocationEstimate < 0) {
+			eventLocationEstimate = 0;
+		} else if (eventLocationEstimate > pathSection.path.length - 1) {
+			eventLocationEstimate = pathSection.path.length - 1;
+		}
+
 		if (previousEstimate - eventLocationEstimate < 2 && previousEstimate - eventLocationEstimate > -2) {
 			break;
 		}
@@ -315,9 +322,10 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 		if (status == 'OK') {
 			var steps = result.routes[0].legs[0].steps;
 			var newPathSection = {duration: {}, path: []};
+
+			/* Deep copy utilized attributes since values change in the case of a multi-step result*/
 			newPathSection.duration.value = steps[0].duration.value;
 			newPathSection.path = steps[0].path.slice();
-			newPathSection.start_location = steps[0].start_location;
 
 
 			/* Include all steps if multiple were included */
@@ -334,25 +342,22 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 
 			var arrivalTime = startTime + newPathSection.duration.value * 1000;
 			if (self.time.getTime() - arrivalTime > ESTIMATE_RANGE) {
-				console.log('>');
 				newPathSection.path = pathSection.path.slice(eventLocationEstimate);
 				newPathSection.duration.value = pathSection.duration.value - newPathSection.duration.value;
 				self.refineEstimate(newPathSection, arrivalTime);
 			} else if (self.time.getTime() - arrivalTime < -ESTIMATE_RANGE) {
-				console.log('<');	
 				self.refineEstimate(newPathSection, startTime);
 			} else {
 				self.refined = true;
 				self.setLatLng(self.latLng());
 			}
-			console.log(self.time.getTime() - arrivalTime, self.time, new Date(arrivalTime));
 		} else {
-			console.log(status);
+			console.log(status, result);
 		}
 	};
 
 	if (self.refineAttemps <= MAX_ATTEMPTS) {
-		GetRoute(pathSection.start_location, self.latLng(), directionsCallback);
+		GetRoute(pathSection.path[0], self.latLng(), directionsCallback);
 	} else {
 		self.setLatLng(self.latLng());
 	}
