@@ -11,7 +11,7 @@ var timeFormatLocale = 'en-US';
 /*eslint-disable quotes*/
 /* Template used format data into infoWindow DOM elements */
 var contentTemplate = {
-	sun: '<p>Sunrise: %sunrise%<br>Solar noon: %noon%<br>Sunset: %sunset%</p><p class="time-zone">in %timezone%</p>',
+	time: '<p>at %time%</p><p class="time-zone">%timezone%</p>',
 	name: '<h3>%text%</h3>',
 	start: "<div class='info-window'>",
 	end: '</div>'
@@ -71,12 +71,17 @@ var Place = function(data) {
 		}
 	}
 
-	self.status = 'deselected';
-
 	self.time = new Date();
 
-	/* Loading message in case content is slow to build */
-	self.content = 'Loading...';
+	self.status = 'deselected';
+	self.content = '';
+
+	self.template = {};
+	for (item in contentTemplate) {
+		if (contentTemplate.hasOwnProperty(item)) {
+			self.template[item] = contentTemplate[item];
+		}
+	}
 
 	self.infoWindow = new google.maps.InfoWindow();
 	
@@ -111,7 +116,7 @@ Place.prototype.setAddress = function(address) {
 Place.prototype.reset = function() {
 	this.latLng(undefined);
 	this.address(undefined);
-	this.content = 'Loading...';
+	this.content = '';
 	this.status = 'deselected';
 
 	if (this.marker) {
@@ -158,15 +163,13 @@ Place.prototype.useLatLngForInfo = function () {
 	self.getWeather();
 
 	/* Run methods dependent on time, but don't change time */
-	self.setTime();
+	self.createTime();
 
 	if (self.marker) {
 		self.marker.setPosition(self.latLng());
 	} else {
 		self.createMarker();
 	}
-
-	map.setCenter(self.latLng());
 };
 
 /* Get locale weather data */
@@ -184,7 +187,6 @@ Place.prototype.getWeather = function() {
 /* Calculate local sun times */
 Place.prototype.getSunTimes = function() {
 	this.sun = SunCalc.getTimes(this.time, this.latLng().lat(), this.latLng().lng());
-	this.buildContent();
 };
 
 /* Get locale timezone information */
@@ -199,36 +201,29 @@ Place.prototype.getTimeZone = function() {
 	});
 };
 
-Place.prototype.setTime = function(newTime) {
+Place.prototype.createTime = function(newTime) {
 	this.time = newTime || this.time;
 
 	if (this.latLng()) {
 		this.getTimeZone();
 		this.getSunTimes();
+		this.buildContent();
 	}
 };
 
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
-	this.content = contentTemplate.start;
-	this.content += contentTemplate.name.replace('%text%', this.name);
+	var timeZoneName = 'UTC';
 
-	if (this.sun) {
-		var options = {timeZone: 'UTC'};
-		var timeZoneName = 'UTC';
-
-		if (this.hasOwnProperty('timeZone')) {
-			options = {timeZone: this.timeZone.timeZoneId};
-			timeZoneName = this.timeZone.timeZoneName;
-		}
-
-		this.content += contentTemplate.sun.replace('%sunrise%', this.sun.sunrise.toLocaleTimeString())
-			.replace('%noon%', this.sun.solarNoon.toLocaleTimeString(timeFormatLocale, options))
-			.replace('%sunset%', this.sun.sunset.toLocaleTimeString(timeFormatLocale, options)).replace('%timezone%', timeZoneName);
+	if (this.hasOwnProperty('timeZone')) {
+		timeZoneName = this.timeZone.timeZoneName;
 	}
 
-	this.content += contentTemplate.end;
+	this.content = this.template.start;
+	this.content += this.template.name.replace('%text%', this.name);
+	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString()).replace('%timezone%', timeZoneName);
+	this.content += this.template.end;
 
 	this.infoWindow.setContent(this.content);
 };
@@ -277,17 +272,41 @@ Place.prototype.toggleSelected = function() {
 };
 
 /****************************/
+/****** Waypoint Class ******/
+/****************************/
+
+var Waypoint = function(data) {
+	var self = this;
+
+	Place.call(self, data);
+
+	self.setMapCenter = ko.computed(function() {
+		map.setCenter(self.latLng());
+	});
+};
+
+Waypoint.prototype = Object.create(Place.prototype);
+Waypoint.prototype.constructor  = Waypoint;
+
+
+/****************************/
 /****** SunPlace Class ******/
 /****************************/
 
 var SunPlace = function(data) {
 	Place.call(this, data);
-	this.refined = false;
+
+	this.template.time = '<p>Calculating...</p>';
 	this.refineAttemps = 0;
 };
 
 SunPlace.prototype = Object.create(Place.prototype);
 SunPlace.prototype.constructor  = SunPlace;
+
+SunPlace.prototype.finalize = function() {
+	this.template.time = contentTemplate.time;
+	this.setLatLng(this.latLng());
+};
 
 SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	var self = this;
@@ -311,9 +330,14 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 			break;
 		}
 
-		self.latLng(pathSection.path[eventLocationEstimate]);
-		self.getSunTimes();
-		self.time.setTime(self.sun[self.name.toLowerCase()].getTime());
+		if (self.refineAttemps == 1) {
+			self.setLatLng(pathSection.path[eventLocationEstimate]);
+		} else {
+			self.latLng(pathSection.path[eventLocationEstimate]);
+			self.getSunTimes();
+		}
+
+		self.createTime(self.sun[self.name.toLowerCase()]);
 		
 		previousEstimate = eventLocationEstimate;
 	}
@@ -321,9 +345,9 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	var directionsCallback = function(result, status) {
 		if (status == 'OK') {
 			var steps = result.routes[0].legs[0].steps;
-			var newPathSection = {duration: {}, path: []};
-
+			
 			/* Deep copy utilized attributes since values change in the case of a multi-step result*/
+			var newPathSection = {duration: {}, path: []};
 			newPathSection.duration.value = steps[0].duration.value;
 			newPathSection.path = steps[0].path.slice();
 
@@ -336,21 +360,21 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 				}
 			}
 
-			if (steps.length > 1) {
-				console.log('multi-step check:', steps, newPathSection);
-			}
-
 			var arrivalTime = startTime + newPathSection.duration.value * 1000;
-			if (self.time.getTime() - arrivalTime > ESTIMATE_RANGE) {
+			self.estimateError = self.time.getTime() - arrivalTime;
+			if (self.estimateError > ESTIMATE_RANGE) {
 				newPathSection.path = pathSection.path.slice(eventLocationEstimate);
 				newPathSection.duration.value = pathSection.duration.value - newPathSection.duration.value;
 				self.refineEstimate(newPathSection, arrivalTime);
-			} else if (self.time.getTime() - arrivalTime < -ESTIMATE_RANGE) {
+			} else if (self.estimateError < -ESTIMATE_RANGE) {
 				self.refineEstimate(newPathSection, startTime);
 			} else {
-				self.refined = true;
-				self.setLatLng(self.latLng());
+				self.finalize();
 			}
+		} else if (status == 'OVER_QUERY_LIMIT') {
+			setTimeout(function() {GetRoute(pathSection.path[0], self.latLng(), directionsCallback);}, 1000);
+
+			console.log('QL hit');
 		} else {
 			console.log(status, result);
 		}
@@ -359,7 +383,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	if (self.refineAttemps <= MAX_ATTEMPTS) {
 		GetRoute(pathSection.path[0], self.latLng(), directionsCallback);
 	} else {
-		self.setLatLng(self.latLng());
+		self.finalize();
 	}
 };
 
@@ -378,7 +402,7 @@ Journey.prototype.loadRoute = function(route) {
 
 	directionsDisplay.setDirections(route);
 
-	this.finishPlace().setTime(new Date(this.startPlace().time.getTime() + this.getTravelTime()));
+	this.finishPlace().createTime(new Date(this.startPlace().time.getTime() + this.getTravelTime()));
 
 	this.analyzeRoute();
 };
@@ -466,7 +490,7 @@ Journey.prototype.analyzeRoute = function() {
 				/* Create sun event and call the estimation of its location*/
 				var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
 				var sunEvent = new SunPlace({name: sunEventDisplayName}); 
-				sunEvent.time = new Date(sunEventTime.getTime());
+				sunEvent.createTime(sunEventTime);
 				self.sunEvents.push(sunEvent);
 				sunEvent.refineEstimate(path[i], locationTime.getTime());
 
@@ -505,8 +529,8 @@ Journey.prototype.getTravelTime = function() {
 /************************/
 var viewModel = function() {
 	vm = this;
-	vm.startPlace = ko.observable(new Place({name: 'Start'}));
-	vm.finishPlace = ko.observable(new Place({name: 'Finish'}));
+	vm.startPlace = ko.observable(new Waypoint({name: 'Start'}));
+	vm.finishPlace = ko.observable(new Waypoint({name: 'Finish'}));
 	vm.journey = ko.observable();
 
 	/* Increase map zoom level on large displays */
@@ -519,7 +543,7 @@ var viewModel = function() {
 	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
-		vm.startPlace(new Place({name: 'Start', address: $('.alert-window .field')[0].value}));
+		vm.startPlace(new Waypoint({name: 'Start', address: $('.alert-window .field')[0].value}));
 		vm.showAlert(false);
 
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
@@ -531,8 +555,7 @@ var viewModel = function() {
 	vm.getStartLocation = function(position) {
 		if (position) {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-			
-			map.setCenter(latLng);		
+				
 			vm.startPlace().setLatLng(latLng);
 			vm.showAlert(false);
 		}
@@ -624,7 +647,7 @@ var viewModel = function() {
 
 };
 
-/* Declare variables that need to be global (mostly necessary due to callback functions) */
+/* Declare global objects */
 var map;
 var geocoder;
 var directionsService;

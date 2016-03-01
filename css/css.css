@@ -45,6 +45,10 @@ body {
   text-align: right;
   margin: -12px 0 0 0; }
 
+h3 {
+  margin: 5px 0 -10px 0;
+  padding: 10px 0 0 0; }
+
 /****** Navigation side bar ******/
 #nav-bar {
   background: rgba(128, 128, 128, 0.4);
