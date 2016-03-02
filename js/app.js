@@ -18,6 +18,14 @@ var contentTemplate = {
 };
 /*eslint-enable quotes*/
 
+var icons = {
+	standard: {img: 'imgs/default.png', pixelOffset:{width: 0, height: 0}},
+	day: {img: 'imgs/day.png', pixelOffset:{width: 0, height: 16}},
+	night: {img: 'imgs/night.png', pixelOffset:{width: 0, height: 0}},
+	sunset: {img: 'imgs/sunset.png', pixelOffset:{width: 0, height: 16}},
+	sunrise: {img: 'imgs/sunrise.png', pixelOffset:{width: 0, height: 16}}
+};
+
 var GetRoute = function(origin, destination, callback) {
 	var data = {
 		origin: origin,
@@ -83,8 +91,8 @@ var Place = function(data) {
 		}
 	}
 
-	self.infoWindow = new google.maps.InfoWindow();
-	
+	self.icon = icons.standard;
+	self.infoWindow = new google.maps.InfoWindow({pixelOffset: self.icon.pixelOffset});
 
 	/* Get missing address or LatLng and then additional data*/
 	if (!self.latLng() && self.address()) {
@@ -222,7 +230,7 @@ Place.prototype.buildContent = function() {
 
 	this.content = this.template.start;
 	this.content += this.template.name.replace('%text%', this.name);
-	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString()).replace('%timezone%', timeZoneName);
+	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString(timeFormatLocale)).replace('%timezone%', timeZoneName);
 	this.content += this.template.end;
 
 	this.infoWindow.setContent(this.content);
@@ -237,7 +245,8 @@ Place.prototype.createMarker = function() {
 		position: self.latLng(),
 		map: map,
 		title: self.name,
-		draggable: true
+		draggable: true,
+		icon: self.icon.img
 	});
 
 	/* Remove marker from map if place not active otherwise set selected to display marker */
@@ -267,6 +276,7 @@ Place.prototype.toggleSelected = function() {
 		this.status = 'selected';
 		if (this.hasOwnProperty('marker')) {
 			this.infoWindow.open(map, this.marker);
+			this.infoWindow.setOptions({pixelOffset: this.icon.pixelOffset});
 		}
 	}
 };
@@ -298,6 +308,8 @@ var SunPlace = function(data) {
 
 	this.template.time = '<p>Calculating...</p>';
 	this.refineAttemps = 0;
+	
+	this.icon = icons[this.name.toLowerCase()];
 };
 
 SunPlace.prototype = Object.create(Place.prototype);
