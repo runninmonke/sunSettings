@@ -233,7 +233,19 @@ Place.prototype.buildContent = function() {
 	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString(timeFormatLocale)).replace('%timezone%', timeZoneName);
 	this.content += this.template.end;
 
+	if (!icons.hasOwnProperty(this.name.toLowerCase())) {
+		if (this.time.getTime() > this.sun.sunset.getTime() || this.time.getTime() < this.sun.sunrise.getTime()) {
+			this.icon = icons.night;
+		} else {
+			this.icon = icons.day;
+		}
+	}
+
 	this.infoWindow.setContent(this.content);
+	this.infoWindow.setOptions({pixelOffset: this.icon.pixelOffset});
+	if (this.hasOwnProperty('marker')) {
+		this.marker.setOptions({icon: this.icon.img});
+	}
 };
 
 /* Use latLng data to create map marker */
@@ -276,7 +288,6 @@ Place.prototype.toggleSelected = function() {
 		this.status = 'selected';
 		if (this.hasOwnProperty('marker')) {
 			this.infoWindow.open(map, this.marker);
-			this.infoWindow.setOptions({pixelOffset: this.icon.pixelOffset});
 		}
 	}
 };
