@@ -64,7 +64,7 @@ var Place = function(data) {
 		read: function() {
 		},
 		write: function(){
-			self.setAddress($('.' + self.name.toLowerCase() + ' .field')[0].value);
+			self.setAddress($('.' + self.name + ' .field')[0].value);
 		},
 		owner: this
 	});
@@ -79,8 +79,8 @@ var Place = function(data) {
 		}
 	}
 
+	self.displayName = self.name[0].toUpperCase() + self.name.slice(1);
 	self.time = new Date();
-
 	self.status = 'deselected';
 	self.content = '';
 
@@ -92,6 +92,7 @@ var Place = function(data) {
 	}
 
 	self.icon = icons.standard;
+	self.draggable = false;
 	self.infoWindow = new google.maps.InfoWindow({pixelOffset: self.icon.pixelOffset});
 
 	/* Get missing address or LatLng and then additional data*/
@@ -229,11 +230,11 @@ Place.prototype.buildContent = function() {
 	}
 
 	this.content = this.template.start;
-	this.content += this.template.name.replace('%text%', this.name);
+	this.content += this.template.name.replace('%text%', this.displayName);
 	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString(timeFormatLocale)).replace('%timezone%', timeZoneName);
 	this.content += this.template.end;
 
-	if (!icons.hasOwnProperty(this.name.toLowerCase())) {
+	if (!icons.hasOwnProperty(this.name)) {
 		if (this.time.getTime() > this.sun.sunset.getTime() || this.time.getTime() < this.sun.sunrise.getTime()) {
 			this.icon = icons.night;
 		} else {
@@ -256,8 +257,8 @@ Place.prototype.createMarker = function() {
 	self.marker = new google.maps.Marker({
 		position: self.latLng(),
 		map: map,
-		title: self.name,
-		draggable: true,
+		title: self.displayName,
+		draggable: self.draggable,
 		icon: self.icon.img
 	});
 
@@ -301,6 +302,14 @@ var Waypoint = function(data) {
 
 	Place.call(self, data);
 
+	self.draggable = true;
+	/* Make sure marker is draggable in case creation is already complete */
+	if (self.hasOwnProperty('marker')) {
+		self.marker.setOptions({
+			draggable: this.draggable
+		});
+	}
+
 	self.setMapCenter = ko.computed(function() {
 		map.setCenter(self.latLng());
 	});
@@ -320,7 +329,7 @@ var SunPlace = function(data) {
 	this.template.time = '<p>Calculating...</p>';
 	this.refineAttemps = 0;
 	
-	this.icon = icons[this.name.toLowerCase()];
+	this.icon = icons[this.name];
 };
 
 SunPlace.prototype = Object.create(Place.prototype);
@@ -349,6 +358,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 			eventLocationEstimate = pathSection.path.length - 1;
 		}
 
+		/* Exit loop once best guess of location has become consistent */
 		if (previousEstimate - eventLocationEstimate < 2 && previousEstimate - eventLocationEstimate > -2) {
 			break;
 		}
@@ -360,7 +370,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 			self.getSunTimes();
 		}
 
-		self.createTime(self.sun[self.name.toLowerCase()]);
+		self.createTime(self.sun[self.name]);
 		
 		previousEstimate = eventLocationEstimate;
 	}
@@ -511,8 +521,7 @@ Journey.prototype.analyzeRoute = function() {
 				}
 
 				/* Create sun event and call the estimation of its location*/
-				var sunEventDisplayName = sunEventName[0].toUpperCase() + sunEventName.slice(1);
-				var sunEvent = new SunPlace({name: sunEventDisplayName}); 
+				var sunEvent = new SunPlace({name: sunEventName}); 
 				sunEvent.createTime(sunEventTime);
 				self.sunEvents.push(sunEvent);
 				sunEvent.refineEstimate(path[i], locationTime.getTime());
@@ -552,8 +561,8 @@ Journey.prototype.getTravelTime = function() {
 /************************/
 var viewModel = function() {
 	vm = this;
-	vm.startPlace = ko.observable(new Waypoint({name: 'Start'}));
-	vm.finishPlace = ko.observable(new Waypoint({name: 'Finish'}));
+	vm.startPlace = ko.observable(new Waypoint({name: 'start'}));
+	vm.finishPlace = ko.observable(new Waypoint({name: 'finish'}));
 	vm.journey = ko.observable();
 
 	/* Increase map zoom level on large displays */
@@ -566,7 +575,7 @@ var viewModel = function() {
 	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
-		vm.startPlace(new Waypoint({name: 'Start', address: $('.alert-window .field')[0].value}));
+		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field')[0].value}));
 		vm.showAlert(false);
 
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
