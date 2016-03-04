@@ -328,18 +328,19 @@ Waypoint.prototype.constructor  = Waypoint;
 var SunPlace = function(data) {
 	Place.call(this, data);
 
-	this.template.time = '<p>Calculating...</p>';
+	this.template.time = '<p>Locating...</p>';
 	this.refineAttemps = 0;
 	
 	this.icon = icons[this.name];
 };
 
 SunPlace.prototype = Object.create(Place.prototype);
-SunPlace.prototype.constructor  = SunPlace;
+SunPlace.prototype.constructor = SunPlace;
 
 SunPlace.prototype.finalize = function() {
 	this.template.time = contentTemplate.time;
 	this.setLatLng(this.latLng());
+	this.toggleSelected();
 };
 
 SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
