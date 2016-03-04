@@ -23,6 +23,7 @@
                     <div class="label">Finish</div>
                     <input type="text" class="field" data-bind="value: displayRead">
                     <div class="row">
+                        <button type="button" class="button set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
                         <button type="button" class="button" data-bind="click: displayWrite">Submit</button>
                     </div>
                 </div>
@@ -50,11 +51,17 @@
         <div id="map" data-bind="markerClicks: places"></div>
         <div class="alert-container" data-bind="visible: showAlert">
             <div class="alert-window">
-                <div class="message label" data-bind="text: alertMessage">Allow geolocation or enter starting location:</div>
-                <div class="form-container">
-                    <input type="text" class="field" placeholder="">
-                    <button type="button" class="button" data-bind="click: inputStart">Submit</button>
-                </div>          
+                <div class="dynamic-container">
+                    <div class="message label" data-bind="text: alertMessage">Allow geolocation or enter starting location:</div>
+                    <div class="form-container">
+                        <input type="text" class="field" placeholder="">
+                        <button type="button" class="button" data-bind="click: inputStart">Submit</button>
+                    </div>
+                </div>
+                <!-- Button included so KO binding can be applied. Used later with dynamically added content-->
+                <div class="form-container hidden">
+                    <button type="button" class="button time-button" data-bind="click: setStartTime">Submit</button>
+                </div>  
             </div>
         </div>
         <!--build:js js/main.min.js -->

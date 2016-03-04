@@ -113,8 +113,16 @@ h3 {
 /*** Search ***/
 
 .search {
+  .finish {
+    margin-top: -15px;
+  }
+
   .button {
     float: right;
+  }
+
+  .button.set-time {
+    float: left;
   }
 }
 
@@ -186,15 +194,6 @@ h3 {
 
 /* Location list */
 
-.filter-results {
-  /* Set the height of the element so the list is scrollable when the content exceeds the remaining screen space */
-  height: calc(100% - 150px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  pointer-events: visiblePainted;
-  margin-top: -25px;
-}
-
 .selected {
   color: #ffe168;
   text-shadow: -2px 0 2px #444, 0 2px 2px #444, 2px 0 2px #444, 0 -2px 2px #444, -2px -2px 2px #444, -2px 2px 2px #444, 2px -2px 2px #444, 2px 2px 2px #444, -2px 0 2px #444,
@@ -256,6 +255,37 @@ h3 {
     position: relative;
     float: right;
     background: rgba(76, 76, 76, 0.9);
+  }
+  
+  input{
+    margin: 0 5px;
+  }
+
+  .date,
+  .time {
+    margin: 10px 0;
+  }
+
+  .month,
+  .day,
+  .time input {
+    width: 1.25em;
+  }
+
+  .seconds {
+    margin-left: 5px;
+  }
+
+  .year {
+    width: 2.25em;
+  }
+
+  .form-container {
+    text-align: center;
+  }
+
+  .time-button {
+    float: none;
   }
 }
 

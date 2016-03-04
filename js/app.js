@@ -13,9 +13,11 @@ var timeFormatLocale = 'en-US';
 var contentTemplate = {
 	time: '<p>at %time%</p><p class="time-zone">%timezone%</p>',
 	name: '<h3>%text%</h3>',
-	start: "<div class='info-window'>",
+	start: '<div class="info-window">',
 	end: '</div>'
 };
+
+var timeSettingsHtml = '<div class="message label" data-bind="text: alertMessage">Departure<div class="date">Date:<input type="text" class="field month"><span>/</span><input type="text" class="field day"><span>/</span><input type="text" class="field year"></div><div class="time">Time:<input type="text" class="field hours"><span>:</span><input type="text" class="field minutes"><span>:</span><input type="text" class="field seconds"></div></div>';
 /*eslint-enable quotes*/
 
 var icons = {
@@ -181,6 +183,7 @@ Place.prototype.useLatLngForInfo = function () {
 	}
 };
 
+/* TODO: Implement display of weather at start and finsih of trip */
 /* Get locale weather data */
 Place.prototype.getWeather = function() {
 //	var self = this;
@@ -318,7 +321,7 @@ var Waypoint = function(data) {
 };
 
 Waypoint.prototype = Object.create(Place.prototype);
-Waypoint.prototype.constructor  = Waypoint;
+Waypoint.prototype.constructor = Waypoint;
 
 
 /****************************/
@@ -617,6 +620,18 @@ var viewModel = function() {
 
 	vm.openMenu();
 
+	vm.showTimeSettings = function() {
+		$('.dynamic-container').html(timeSettingsHtml);
+		$('.alert-window').css('width', '200px');
+		$('.alert-window').css('min-width', '200px');
+		$('.form-container').toggleClass('hidden', false);
+		vm.showAlert(true);
+	};
+
+	vm.setStartTime = function() {
+		vm.showAlert(false);
+	}
+
 	vm.directionsCallback = function(result, status) {
 		if (status == google.maps.DirectionsStatus.OK) {
 			vm.journey().loadRoute(result);		
@@ -664,6 +679,7 @@ var viewModel = function() {
 	vm.maxTemp = ko.observable('');
 	vm.minTemp = ko.observable('');
 
+	/* TODO: Implement weather */
 	/* Display neighborhood weather in nav bar */
 	vm.displayWeather = function(weather) {
 		vm.conditionImg('http://' + weather.current.condition.icon);
