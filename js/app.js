@@ -223,15 +223,17 @@ Place.prototype.createTime = function(newTime) {
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
+	var options = {timeZone: 'UTC'};
 	var timeZoneName = 'UTC';
 
 	if (this.hasOwnProperty('timeZone')) {
+		options = {timeZone: this.timeZone.timeZoneId};
 		timeZoneName = this.timeZone.timeZoneName;
 	}
 
 	this.content = this.template.start;
 	this.content += this.template.name.replace('%text%', this.displayName);
-	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString(timeFormatLocale)).replace('%timezone%', timeZoneName);
+	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString(timeFormatLocale, options)).replace('%timezone%', timeZoneName);
 	this.content += this.template.end;
 
 	if (!icons.hasOwnProperty(this.name)) {
