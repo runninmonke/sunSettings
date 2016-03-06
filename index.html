@@ -58,10 +58,11 @@
                         <button type="button" class="button" data-bind="click: inputStart">Submit</button>
                     </div>
                 </div>
-                <!-- Button included so KO binding can be applied. Used later with dynamically added content-->
+                <!-- Buttons included so KO binding can be applied. Used later with dynamically added content-->
                 <div class="form-container hidden">
-                    <button type="button" class="button time-button" data-bind="click: setStartTime">Submit</button>
-                </div>  
+                    <button type="button" class="button time-button" data-bind="click: removeDepartureTime">Use current time</button>
+                    <button type="button" class="button" data-bind="click: setDepartureTime">Submit</button>
+                </div>
             </div>
         </div>
         <!--build:js js/main.min.js -->

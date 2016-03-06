@@ -8,7 +8,6 @@ var ESTIMATE_RANGE = 30000;
 
 var timeFormatLocale = 'en-US';
 
-/*eslint-disable quotes*/
 /* Template used format data into infoWindow DOM elements */
 var contentTemplate = {
 	time: '<p>at %time%</p><p class="time-zone">%timezone%</p>',
@@ -17,8 +16,7 @@ var contentTemplate = {
 	end: '</div>'
 };
 
-var timeSettingsHtml = '<div class="message label" data-bind="text: alertMessage">Departure<div class="date">Date:<input type="text" class="field month"><span>/</span><input type="text" class="field day"><span>/</span><input type="text" class="field year"></div><div class="time">Time:<input type="text" class="field hours"><span>:</span><input type="text" class="field minutes"><span>:</span><input type="text" class="field seconds"></div></div>';
-/*eslint-enable quotes*/
+var timeSettingsHtml = '<div class="message label" data-bind="text: alertMessage">Departure<div class="date">Date:<input type="text" class="field month"><span>/</span><input type="text" class="field day"><span>/</span><input type="text" class="field year"></div><div class="time">Time:<input type="text" class="field hours"><span>:</span><input type="text" class="field minutes"><span>:</span><input type="text" class="field seconds"><select class="field meridies"><option value="am">AM</option><option value="pm">PM</option></select></div></div>';
 
 var icons = {
 	standard: {img: 'imgs/default.png', pixelOffset:{width: 0, height: 0}},
@@ -214,7 +212,9 @@ Place.prototype.getTimeZone = function() {
 };
 
 Place.prototype.createTime = function(newTime) {
-	this.time = newTime || this.time;
+	newTime = newTime || this.time.getTime();
+
+	this.time.setTime(newTime);
 
 	if (this.latLng()) {
 		this.getTimeZone();
@@ -376,7 +376,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 			self.getSunTimes();
 		}
 
-		self.createTime(self.sun[self.name]);
+		self.createTime(self.sun[self.name].getTime());
 		
 		previousEstimate = eventLocationEstimate;
 	}
@@ -441,7 +441,7 @@ Journey.prototype.loadRoute = function(route) {
 
 	directionsDisplay.setDirections(route);
 
-	this.finishPlace().createTime(new Date(this.startPlace().time.getTime() + this.getTravelTime()));
+	this.finishPlace().createTime(this.startPlace().time.getTime() + this.getTravelTime());
 
 	this.analyzeRoute();
 };
@@ -528,7 +528,7 @@ Journey.prototype.analyzeRoute = function() {
 
 				/* Create sun event and call the estimation of its location*/
 				var sunEvent = new SunPlace({name: sunEventName}); 
-				sunEvent.createTime(sunEventTime);
+				sunEvent.createTime(sunEventTime.getTime());
 				self.sunEvents.push(sunEvent);
 				sunEvent.refineEstimate(path[i], locationTime.getTime());
 
@@ -570,6 +570,7 @@ var viewModel = function() {
 	vm.startPlace = ko.observable(new Waypoint({name: 'start'}));
 	vm.finishPlace = ko.observable(new Waypoint({name: 'finish'}));
 	vm.journey = ko.observable();
+	vm.departureTime = ko.observable();
 
 	/* Increase map zoom level on large displays */
 	if (window.matchMedia('(min-width: 700px)').matches) {
@@ -621,16 +622,73 @@ var viewModel = function() {
 	vm.openMenu();
 
 	vm.showTimeSettings = function() {
+		var currentTime = vm.departureTime() || vm.startPlace().time;
 		$('.dynamic-container').html(timeSettingsHtml);
-		$('.alert-window').css('width', '200px');
-		$('.alert-window').css('min-width', '200px');
+
+		$('.alert-window').css('width', '210px');
+		$('.alert-window').css('min-width', '210px');
+
+		$('.month').val(currentTime.getMonth() + 1);
+		$('.day').val(currentTime.getDate());
+		$('.year').val(currentTime.getFullYear());
+		
+		var hours = currentTime.getHours();
+		if (hours > 12) {
+			hours = hours - 12;
+			$('.meridies').val('pm');
+		} else if (hours == 0) {
+			hours = 12;
+		}
+
+		var minutes = currentTime.getMinutes().toString();
+		if (minutes.length < 2) {
+			minutes = '0' + minutes;
+		}
+
+		var seconds = currentTime.getSeconds().toString();
+		if (seconds.length < 2) {
+			seconds = '0' + seconds;
+		}
+
+		$('.hours').val(hours);
+		$('.minutes').val(minutes);
+		$('.seconds').val(seconds);
+
 		$('.form-container').toggleClass('hidden', false);
 		vm.showAlert(true);
 	};
 
-	vm.setStartTime = function() {
+	/* TODO: Add error handling */
+	vm.setDepartureTime = function() {
+		
+		var newHours = $('.hours').val();
+		if ($('.meridies').val() == 'pm' && newHours < 12) {
+			newHours = newHours * 1 + 12;
+		}
+
+		var newMonth = $('.month').val() - 1;
+
+		vm.departureTime(new Date($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val()));
+		
+		vm.startPlace().createTime(vm.departureTime().getTime());
+		vm.startPlace().buildContent();
 		vm.showAlert(false);
-	}
+	};
+
+	vm.removeDepartureTime = function() {
+		vm.departureTime(undefined);
+		vm.timer();
+		vm.showAlert(false);
+	};
+
+	vm.timer = function() {
+		if (!vm.departureTime() && !vm.journey()) {
+			vm.startPlace().createTime(Date.now());
+			setTimeout(vm.timer, 1000);
+		}
+	};
+
+	vm.timer();
 
 	vm.directionsCallback = function(result, status) {
 		if (status == google.maps.DirectionsStatus.OK) {
@@ -649,6 +707,10 @@ var viewModel = function() {
 		if (vm.startPlace().latLng() && vm.finishPlace().latLng()) {
 			if (vm.journey()) {
 				vm.journey().resetSunEvents();
+			}
+
+			if (!vm.departureTime()) {
+				vm.startPlace().createTime(Date.now());
 			}
 
 			vm.journey(new Journey(vm.startPlace, vm.finishPlace));

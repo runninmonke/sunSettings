@@ -256,9 +256,19 @@ h3 {
     float: right;
     background: rgba(76, 76, 76, 0.9);
   }
-  
-  input{
+
+  .field {
+    text-align: center;
+  }
+
+  input,
+  select {
     margin: 0 5px;
+  }
+
+  select {
+    width: 3em;
+
   }
 
   .date,
@@ -272,12 +282,8 @@ h3 {
     width: 1.25em;
   }
 
-  .seconds {
-    margin-left: 5px;
-  }
-
   .year {
-    width: 2.25em;
+    width: 2.3em;
   }
 
   .form-container {
@@ -285,7 +291,7 @@ h3 {
   }
 
   .time-button {
-    float: none;
+    float: left;
   }
 }
 
