@@ -64,7 +64,7 @@ var Place = function(data) {
 		read: function() {
 		},
 		write: function(){
-			self.setAddress($('.' + self.name + ' .field')[0].value);
+			self.setAddress($('.' + self.name + ' .field').val());
 		},
 		owner: this
 	});
@@ -567,8 +567,8 @@ Journey.prototype.getTravelTime = function() {
 /************************/
 var viewModel = function() {
 	vm = this;
-	vm.startPlace = ko.observable(new Waypoint({name: 'start'}));
-	vm.finishPlace = ko.observable(new Waypoint({name: 'finish'}));
+	vm.startPlace = ko.observable(new Waypoint({name: 'departure'}));
+	vm.finishPlace = ko.observable(new Waypoint({name: 'arrival'}));
 	vm.journey = ko.observable();
 	vm.departureTime = ko.observable();
 
@@ -582,7 +582,7 @@ var viewModel = function() {
 	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
-		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field')[0].value}));
+		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field').val()}));
 		vm.showAlert(false);
 
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
@@ -751,8 +751,8 @@ var viewModel = function() {
 		vm.minTemp(weather.forecast.forecastday[0].day.mintemp_f + '°F');
 	};
 
-	var autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0]);
-	var autocompleteFinish = new google.maps.places.Autocomplete($('.finish .field')[0]);
+	var autocompleteStart = new google.maps.places.Autocomplete($('.departure .field')[0]);
+	var autocompleteFinish = new google.maps.places.Autocomplete($('.arrival .field')[0]);
 	var autocompleteAlert = new google.maps.places.Autocomplete($('.alert-window .field')[0]);
 	
 	autocompleteStart.bindTo('bounds', map);
