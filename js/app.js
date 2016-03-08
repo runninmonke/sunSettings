@@ -236,7 +236,12 @@ Place.prototype.buildContent = function() {
 
 	this.content = this.template.start;
 	this.content += this.template.name.replace('%text%', this.displayName);
-	this.content += this.template.time.replace('%time%', this.time.toLocaleTimeString(timeFormatLocale, options)).replace('%timezone%', timeZoneName);
+
+	/* Make sure time display stops after AM/PM to avoid repeat timezone display */
+	var displayTime =  this.time.toLocaleTimeString(timeFormatLocale, options);
+	displayTime = displayTime.slice(0, displayTime.indexOf('M') + 1);
+
+	this.content += this.template.time.replace('%time%', displayTime).replace('%timezone%', timeZoneName);
 	this.content += this.template.end;
 
 	if (!icons.hasOwnProperty(this.name)) {
