@@ -551,7 +551,6 @@ Journey.prototype.analyzeRoute = function() {
 
 		findNextSunEvent(sunEventTime.getTime());
 	}
-
 };
 
 Journey.prototype.getTravelTime = function() {
