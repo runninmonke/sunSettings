@@ -668,6 +668,8 @@ var viewModel = function() {
 		var newHours = $('.hours').val();
 		if ($('.meridies').val() == 'pm' && newHours < 12) {
 			newHours = newHours * 1 + 12;
+		} else if ($('.meridies').val() == 'am' && newHours == 12) {
+			newHours = 0;
 		}
 
 		var newMonth = $('.month').val() - 1;
