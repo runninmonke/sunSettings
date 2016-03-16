@@ -209,15 +209,26 @@ Place.prototype.getTimeZone = function() {
 			self.buildContent();
 		}
 	});
+
+	console.log("got TimeZone");
 };
 
 Place.prototype.createTime = function(newTime) {
 	newTime = newTime || this.time.getTime();
+	var newTimeObj = new Date(newTime);
+	var timeDif = Math.abs(newTime - this.time.getTime());
+	var isNewHour = this.time.getHours() == newTimeObj.getHours() ? false : true;
 
 	this.time.setTime(newTime);
 
-	if (this.latLng()) {
+	console.log(isNewHour);
+
+	/* Get time zone info on call that doesn't change time or when the hour changes */
+	if (timeDif == 0 || timeDif >= 3600000 || isNewHour) {
 		this.getTimeZone();
+	}
+
+	if (this.latLng()) {
 		this.getSunTimes();
 		this.buildContent();
 	}
