@@ -209,26 +209,22 @@ Place.prototype.getTimeZone = function() {
 			self.buildContent();
 		}
 	});
-
-	console.log("got TimeZone");
 };
 
 Place.prototype.createTime = function(newTime) {
 	newTime = newTime || this.time.getTime();
+	
 	var newTimeObj = new Date(newTime);
 	var timeDif = Math.abs(newTime - this.time.getTime());
 	var isNewHour = this.time.getHours() == newTimeObj.getHours() ? false : true;
 
 	this.time.setTime(newTime);
 
-	console.log(isNewHour);
-
-	/* Get time zone info on call that doesn't change time or when the hour changes */
-	if (timeDif == 0 || timeDif >= 3600000 || isNewHour) {
-		this.getTimeZone();
-	}
-
 	if (this.latLng()) {
+		/* Get time zone info when call doesn't change time or when hour changes */
+		if (timeDif == 0 || timeDif >= 3600000 || isNewHour) {
+			this.getTimeZone();
+		}
 		this.getSunTimes();
 		this.buildContent();
 	}
@@ -381,7 +377,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 		}
 
 		/* Exit loop once best guess of location has become consistent */
-		if (previousEstimate - eventLocationEstimate < 2 && previousEstimate - eventLocationEstimate > -2) {
+		if (Math.abs(previousEstimate - eventLocationEstimate) < 2) {
 			break;
 		}
 
