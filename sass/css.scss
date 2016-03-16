@@ -267,13 +267,21 @@ h3 {
   }
 
   select {
-    width: 3em;
+    width: 3.75em;
+    text-indent: 0.75em;
+    margin-left: -0.75em;
+  }
 
+  .select-container {
+    width: 3.25em;
+    overflow: hidden;
+    margin: 0 5px;
+    display: inline-flex;
   }
 
   .date,
   .time {
-    margin: 10px 0;
+    margin: 10px -5px;
   }
 
   .month,

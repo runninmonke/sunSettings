@@ -16,7 +16,7 @@ var contentTemplate = {
 	end: '</div>'
 };
 
-var timeSettingsHtml = '<div class="message label" data-bind="text: alertMessage">Departure<div class="date">Date:<input type="text" class="field month"><span>/</span><input type="text" class="field day"><span>/</span><input type="text" class="field year"></div><div class="time">Time:<input type="text" class="field hours"><span>:</span><input type="text" class="field minutes"><span>:</span><input type="text" class="field seconds"><select class="field meridies"><option value="am">AM</option><option value="pm">PM</option></select></div></div>';
+var timeSettingsHtml = '<div class="message label" data-bind="text: alertMessage">Departure<div class="date">Date:<input type="text" class="field month"><span>/</span><input type="text" class="field day"><span>/</span><input type="text" class="field year"></div><div class="time">Time:<input type="text" class="field hours"><span>:</span><input type="text" class="field minutes"><span>:</span><input type="text" class="field seconds"><div class="select-container field"><select class="field meridies"><option value="am">AM</option><option value="pm">PM</option></select></div></div></div>';
 
 var icons = {
 	standard: {img: 'imgs/default.png', pixelOffset:{width: 0, height: 0}},
