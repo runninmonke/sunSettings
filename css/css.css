@@ -207,15 +207,7 @@ h3 {
   .alert-window select {
     margin: 0 5px; }
   .alert-window select {
-    width: 3.75em;
-    margin-left: -0.75em; }
-  .alert-window .select-container {
-    width: 3.25em;
-    overflow: hidden;
-    margin: 0 5px;
-    display: -webkit-inline-flex;
-    display: -ms-inline-flexbox;
-    display: inline-flex; }
+    width: 60px; }
   .alert-window .date,
   .alert-window .time {
     margin: 10px -5px; }
