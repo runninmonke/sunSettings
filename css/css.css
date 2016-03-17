@@ -20,7 +20,7 @@ body {
 
 .button {
   border: none;
-  background-color: rgba(112, 112, 112, 0.8);
+  background-color: #707070;
   width: auto;
   font-size: 0.8em;
   padding: 5px;
@@ -51,7 +51,7 @@ h3 {
 
 /****** Navigation side bar ******/
 #nav-bar {
-  background: rgba(128, 128, 128, 0.4);
+  background: rgba(128, 128, 128, 0.6);
   position: absolute;
   width: 245px;
   height: 100vh;
@@ -83,7 +83,7 @@ h3 {
   margin: 3px 0 0 10px;
   width: 50px;
   height: 57px;
-  background: rgba(128, 128, 128, 0.4);
+  background: rgba(128, 128, 128, 0.6);
   border-radius: 0 2px 2px 0;
   cursor: pointer; }
 
@@ -91,7 +91,7 @@ h3 {
   font-size: 65px;
   font-weight: lighter;
   margin: -10px 0 0 5px;
-  color: rgba(112, 112, 112, 0.8); }
+  color: #707070; }
 
 /*** Search ***/
 .search .arrival {
@@ -171,7 +171,7 @@ h3 {
   position: absolute;
   height: 100vh;
   width: 100vw;
-  background: rgba(128, 128, 128, 0.4);
+  background: rgba(128, 128, 128, 0.6);
   z-index: 10;
   pointer-events: none;
   display: -webkit-flex;
@@ -186,9 +186,10 @@ h3 {
   min-width: 250px;
   max-width: 400px;
   width: 50vw;
-  background: rgba(112, 112, 112, 0.8);
+  background: #707070;
   padding: 15px 25px 10px 25px;
   border-radius: 4px;
+  pointer-events: all;
   display: flex-wrap;
   color: white; }
   .alert-window .message {
@@ -203,14 +204,15 @@ h3 {
     background: rgba(76, 76, 76, 0.9); }
   .alert-window .field {
     text-align: center; }
-  .alert-window input,
-  .alert-window select {
-    margin: 0 5px; }
   .alert-window select {
     width: 60px; }
+  .alert-window .date input {
+    margin: 0 5px 0 -1px; }
+  .alert-window .time input {
+    margin: 0 2px 0 -2px; }
   .alert-window .date,
   .alert-window .time {
-    margin: 10px -5px; }
+    margin: 10px -15px; }
   .alert-window .month,
   .alert-window .day,
   .alert-window .time input {

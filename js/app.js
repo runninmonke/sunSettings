@@ -16,8 +16,6 @@ var contentTemplate = {
 	end: '</div>'
 };
 
-var timeSettingsHtml = '<div class="message label" data-bind="text: alertMessage">Departure<div class="date">Date:<input type="text" class="field month"><span>/</span><input type="text" class="field day"><span>/</span><input type="text" class="field year"></div><div class="time">Time:<input type="text" class="field hours"><span>:</span><input type="text" class="field minutes"><span>:</span><input type="text" class="field seconds"><select class="field meridies"><option value="am">AM</option><option value="pm">PM</option></select></div></div>';
-
 var icons = {
 	standard: {img: 'imgs/default.png', pixelOffset:{width: 0, height: 0}},
 	day: {img: 'imgs/day.png', pixelOffset:{width: 0, height: 16}},
@@ -589,11 +587,12 @@ var viewModel = function() {
 	}
 
 	vm.showAlert = ko.observable(true);
-	vm.alertMessage = ko.observable('Allow geolocation or enter starting location:');
 	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
 		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field').val()}));
+
+		$('.start-content').toggleClass('hidden', true);
 		vm.showAlert(false);
 
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
@@ -607,6 +606,7 @@ var viewModel = function() {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 				
 			vm.startPlace().setLatLng(latLng);
+			$('.start-content').toggleClass('hidden', true);
 			vm.showAlert(false);
 		}
 	};
@@ -634,10 +634,10 @@ var viewModel = function() {
 
 	vm.showTimeSettings = function() {
 		var currentTime = vm.departureTime() || vm.startPlace().time;
-		$('.dynamic-container').html(timeSettingsHtml);
 
 		$('.alert-window').css('width', '210px');
 		$('.alert-window').css('min-width', '210px');
+		$('.time-content').toggleClass('hidden', false);
 
 		$('.month').val(currentTime.getMonth() + 1);
 		$('.day').val(currentTime.getDate());
@@ -665,9 +665,12 @@ var viewModel = function() {
 		$('.minutes').val(minutes);
 		$('.seconds').val(seconds);
 
-		$('.form-container').toggleClass('hidden', false);
+		$('.form-container').toggleClass('hidden', true);
 		vm.showAlert(true);
+		$('.month').select();
 	};
+
+	$('.time-content').on('click', 'input', function(evt) {evt.toElement.select();});
 
 	/* TODO: Add error handling */
 	vm.setDepartureTime = function() {
@@ -685,6 +688,8 @@ var viewModel = function() {
 		
 		vm.startPlace().createTime(vm.departureTime().getTime());
 		vm.startPlace().buildContent();
+
+		$('.time-content').toggleClass('hidden', true);
 		vm.showAlert(false);
 	};
 

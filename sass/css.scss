@@ -1,7 +1,7 @@
 /*** Color variables ***/
 $map-background: #e9e5dc;
-$menu-background: rgba(128, 128, 128, 0.4);
-$menu-item: rgba(112, 112, 112, 0.8);
+$menu-background: rgba(128, 128, 128, 0.6);
+$menu-item: rgb(112, 112, 112);
 
 /* General */
 
@@ -240,6 +240,7 @@ h3 {
   background: $menu-item;
   padding: 15px 25px 10px 25px;
   border-radius: 4px;
+  pointer-events: all;
   display: flex-wrap;
   color: white;
     
@@ -261,18 +262,21 @@ h3 {
     text-align: center;
   }
 
-  input,
-  select {
-    margin: 0 5px;
-  }
-
   select {
     width: 60px;
   }
 
+  .date input {
+    margin: 0 5px 0 -1px;
+  }
+
+  .time input {
+    margin: 0 2px 0 -2px; 
+  }
+
   .date,
   .time {
-    margin: 10px -5px;
+    margin: 10px -15px;
   }
 
   .month,
