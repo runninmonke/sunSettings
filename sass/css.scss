@@ -7,6 +7,7 @@ $menu-item: rgb(112, 112, 112);
 
 html,
 body {
+  -webkit-text-size-adjust: 100%;
   height: 100%;
   width: 100%;
   margin: 0;
@@ -207,8 +208,8 @@ h3 {
 
 #map {
   position: absolute;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   z-index: 0;
 }
 
