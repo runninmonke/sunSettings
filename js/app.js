@@ -780,9 +780,29 @@ var viewModel = function() {
 	
 
 	/* Listener to deal with body overflow that occurs on iPhone in lanscape orientation*/
-	$(function(){window.addEventListener('scroll', function(){
-		window.scrollTo(0, 0);
-	});});
+	$(function() {
+		window.addEventListener('scroll', function(){
+			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
+			if (mq.matches) {
+				window.scrollTo(0, 0);
+			}
+		});
+
+		window.addEventListener('orientationchange', function() {
+			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
+			if (mq.matches) {
+				$('.nav-bar').toggleClass('hidden', true);
+				$('#hamburger').toggleClass('hidden', true);
+				$('.alert-container').toggleClass('hidden', true);
+			} else {
+				$('.nav-bar').toggleClass('hidden', false);
+				$('#hamburger').toggleClass('hidden', false);
+				$('.alert-container').toggleClass('hidden', false);
+			}
+		});
+	});
+
+
 };
 
 /* Declare global objects */
