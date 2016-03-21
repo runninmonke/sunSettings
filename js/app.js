@@ -79,6 +79,8 @@ var Place = function(data) {
 
 	self.displayName = self.name[0].toUpperCase() + self.name.slice(1);
 	self.time = new Date();
+	self.displayTime = new Date();
+	self.timeZone = undefined;
 	self.status = 'deselected';
 	self.content = '';
 
@@ -204,8 +206,10 @@ Place.prototype.getTimeZone = function() {
 	$.getJSON(url, function(results){
 		if (results.status == 'OK') {
 			self.timeZone = results;
-			self.buildContent();
+		} else {
+			self.timeZone = undefined;
 		}
+		self.buildContent();
 	});
 };
 
@@ -219,7 +223,7 @@ Place.prototype.createTime = function(newTime) {
 	this.time.setTime(newTime);
 
 	if (this.latLng()) {
-		/* Get time zone info when call doesn't change time or when hour changes */
+		/* Only get time zone info when call doesn't change time or when hour changes */
 		if (timeDif == 0 || timeDif >= 3600000 || isNewHour) {
 			this.getTimeZone();
 		}
@@ -231,22 +235,43 @@ Place.prototype.createTime = function(newTime) {
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
-	var options = {timeZone: 'UTC'};
 	var timeZoneName = 'UTC';
+	this.displayTime.meridie = 'AM';
 
-	if (this.hasOwnProperty('timeZone')) {
-		options = {timeZone: this.timeZone.timeZoneId};
+	if (this.timeZone) {
 		timeZoneName = this.timeZone.timeZoneName;
+		this.displayTime.setTime(this.time.getTime() + (this.timeZone.rawOffset + this.timeZone.dstOffset) * 1000);
+	} else {
+		this.displayTime.setTime(this.time.getTime());
 	}
+
+	this.displayTime.hours = this.displayTime.getUTCHours();
+	this.displayTime.minutes = this.displayTime.getUTCMinutes().toString();
+	this.displayTime.seconds = this.displayTime.getUTCSeconds().toString();
+
+	if (this.displayTime.hours > 12) {
+		this.displayTime.meridie = 'PM';
+		this.displayTime.hours = this.displayTime.hours - 12;
+	} else if (this.displayTime.hours == 12) {
+		this.displayTime.meridie = 'PM';
+	} else if (this.displayTime.hours == 0) {
+		this.displayTime.hours = '12';
+	}
+
+	if (this.displayTime.minutes.length < 2) {
+		this.displayTime.minutes = '0' + this.displayTime.minutes;
+	}
+
+	if (this.displayTime.seconds.length < 2) {
+		this.displayTime.seconds = '0' + this.displayTime.seconds;
+	}
+
+	var displayTimeString = this.displayTime.hours + ':' + this.displayTime.minutes + ':' +  this.displayTime.seconds + ' ' + this.displayTime.meridie;
 
 	this.content = this.template.start;
 	this.content += this.template.name.replace('%text%', this.displayName);
 
-	/* Make sure time display stops after AM/PM to avoid repeat timezone display */
-	var displayTime =  this.time.toLocaleTimeString(timeFormatLocale, options);
-	displayTime = displayTime.slice(0, displayTime.indexOf('M') + 1);
-
-	this.content += this.template.time.replace('%time%', displayTime).replace('%timezone%', timeZoneName);
+	this.content += this.template.time.replace('%time%', displayTimeString).replace('%timezone%', timeZoneName);
 	this.content += this.template.end;
 
 	if (!icons.hasOwnProperty(this.name)) {
@@ -639,31 +664,15 @@ var viewModel = function() {
 		$('.alert-window').css('min-width', '210px');
 		$('.time-content').toggleClass('hidden', false);
 
-		$('.month').val(currentTime.getMonth() + 1);
-		$('.day').val(currentTime.getDate());
-		$('.year').val(currentTime.getFullYear());
-		
-		var hours = currentTime.getHours();
-		if (hours > 12) {
-			hours = hours - 12;
-			$('.meridies').val('pm');
-		} else if (hours == 0) {
-			hours = 12;
-		}
+		$('.month').val(vm.startPlace().displayTime.getUTCMonth() + 1);
+		$('.day').val(vm.startPlace().displayTime.getUTCDate());
+		$('.year').val(vm.startPlace().displayTime.getUTCFullYear());
 
-		var minutes = currentTime.getMinutes().toString();
-		if (minutes.length < 2) {
-			minutes = '0' + minutes;
-		}
+		$('.hours').val(vm.startPlace().displayTime.hours);
+		$('.minutes').val(vm.startPlace().displayTime.minutes);
+		$('.seconds').val(vm.startPlace().displayTime.seconds);
 
-		var seconds = currentTime.getSeconds().toString();
-		if (seconds.length < 2) {
-			seconds = '0' + seconds;
-		}
-
-		$('.hours').val(hours);
-		$('.minutes').val(minutes);
-		$('.seconds').val(seconds);
+		$('.meridies').val(vm.startPlace().displayTime.meridie);
 
 		$('.form-container').toggleClass('hidden', true);
 		vm.showAlert(true);
@@ -744,13 +753,6 @@ var viewModel = function() {
 			vm.journey().loadRoute(directionsRoute);
 		}
 	});
-
-	vm.dayLength = ko.computed(function(){
-	/*	if (vm.journey() && vm.startPlace().sun && vm.finishPlace().sun) {
-			$('.info').toggleClass('hidden', false);
-			return (vm.finishPlace().sun.sunset.getTime() - vm.startPlace().sun.sunset.getTime()) / 60000;
-	*/	}
-	);
 
 	/* Variables for weather section display */
 	vm.conditionImg = ko.observable('');
