@@ -775,7 +775,12 @@ var viewModel = function() {
 	
 	autocompleteStart.bindTo('bounds', map);
 	autocompleteFinish.bindTo('bounds', map);
+	
 
+	/* Listener to deal with body overflow that occurs on iPhone in lanscape orientation*/
+	$(function(){window.addEventListener('scroll', function(){
+		window.scrollTo(0, 0);
+	});});
 };
 
 /* Declare global objects */
