@@ -15,14 +15,14 @@
             <section class="search">
                 <div class="departure row" data-bind="with: startPlace">
                     <div class="label">Start</div>
-                    <input type="text" class="field" data-bind="value: displayRead">
+                    <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row">
                         <button type="button" class="button" data-bind="click: displayWrite">Submit</button>
                     </div>
                 </div>
                 <div class="arrival row" data-bind="with: finishPlace">
                     <div class="label">Finish</div>
-                    <input type="text" class="field" data-bind="value: displayRead">
+                    <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row">
                         <button type="button" class="button set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
                         <button type="button" class="button" data-bind="click: displayWrite">Submit</button>
@@ -44,7 +44,7 @@
                 </div>
             </section>
         </div>
-        <div id="hamburger" data-bind="attr: {class: menuStatus}, click: openMenu">
+        <div id="hamburger" data-bind="attr: {class: menuStatus}, click: toggleMenu">
             <div class="icon">></div>
         </div>
         <div class="alert-container" data-bind="visible: showAlert">

@@ -67,6 +67,14 @@ var Place = function(data) {
 		owner: this
 	});
 
+	self.keyHandler = function(data, evt) {
+		if (evt.keyCode == 13) {
+			self.setAddress(evt.target.value);
+		}
+
+		return true;
+	};
+
 
 	self.active = ko.observable(true);
 
@@ -623,7 +631,7 @@ var viewModel = function() {
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
 		autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0]);
 		autocompleteStart.bindTo('bounds', map);
-
+		$('.arrival input').focus();
 	};
 
 	vm.getStartLocation = function(position) {
@@ -633,6 +641,7 @@ var viewModel = function() {
 			vm.startPlace().setLatLng(latLng);
 			$('.start-content').toggleClass('hidden', true);
 			vm.showAlert(false);
+			$('.arrival input').focus();
 		}
 	};
 
@@ -645,8 +654,10 @@ var viewModel = function() {
 	vm.menuStatus = ko.observable('closed');
 
 	/* Toggle menu nav-bar open and closed */
-	vm.openMenu = function() {
-		if (vm.menuStatus() == 'closed') {
+	vm.toggleMenu = function(evt, obj, actionCase) {
+		actionCase = actionCase || vm.menuStatus();
+
+		if (actionCase == 'closed') {
 			vm.menuStatus('open');
 			$('.icon').text('<');
 		} else {
@@ -655,7 +666,7 @@ var viewModel = function() {
 		}
 	};
 
-	vm.openMenu();
+	vm.toggleMenu();
 
 	vm.showTimeSettings = function() {
 		var currentTime = vm.departureTime() || vm.startPlace().time;
@@ -676,18 +687,16 @@ var viewModel = function() {
 
 		$('.form-container').toggleClass('hidden', true);
 		vm.showAlert(true);
-		$('.month').select();
+		$('.date').focus();
 	};
-
-	$('.time-content').on('click', 'input', function(evt) {evt.toElement.select();});
 
 	/* TODO: Add error handling */
 	vm.setDepartureTime = function() {
 		
 		var newHours = $('.hours').val();
-		if ($('.meridies').val() == 'pm' && newHours < 12) {
+		if ($('.meridies').val() == 'PM' && newHours < 12) {
 			newHours = newHours * 1 + 12;
-		} else if ($('.meridies').val() == 'am' && newHours == 12) {
+		} else if ($('.meridies').val() == 'AM' && newHours == 12) {
 			newHours = 0;
 		}
 
@@ -700,12 +709,15 @@ var viewModel = function() {
 
 		$('.time-content').toggleClass('hidden', true);
 		vm.showAlert(false);
+
+		$('.set-time').focus();
 	};
 
 	vm.removeDepartureTime = function() {
 		vm.departureTime(undefined);
 		vm.timer();
 		vm.showAlert(false);
+		$('.set-time').focus();
 	};
 
 	vm.timer = function() {
@@ -743,9 +755,14 @@ var viewModel = function() {
 			vm.journey(new Journey(vm.startPlace, vm.finishPlace));
 
 			GetRoute(vm.startPlace().latLng(), vm.finishPlace().latLng(), vm.directionsCallback);
+
+			/* Pass in nothing for evt or obj, but pass 'open' for actionCase so the menu gets closed if it's open */
+			vm.toggleMenu(null, null, 'open');
 		}
 	});
 
+
+	/* Listens for route drag events and reloads route */
 	directionsDisplay.addListener('directions_changed', function() {
 		var directionsRoute = directionsDisplay.getDirections();
 
@@ -778,6 +795,9 @@ var viewModel = function() {
 	autocompleteStart.bindTo('bounds', map);
 	autocompleteFinish.bindTo('bounds', map);
 	
+	$('body').on('focus', 'input', function(evt) {
+		evt.currentTarget.setSelectionRange(0, 999);
+	});
 
 	/* Listener to deal with body overflow that occurs on iPhone in lanscape orientation*/
 	$(function() {
@@ -788,10 +808,10 @@ var viewModel = function() {
 			}
 		});
 
-		window.addEventListener('orientationchange', function() {
+		window.addEventListener('resize', function() {
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
 			if (mq.matches) {
-				$('.nav-bar').toggleClass('hidden', true);
+				$('#nav-bar').toggleClass('hidden', true);
 				$('#hamburger').toggleClass('hidden', true);
 				$('.alert-container').toggleClass('hidden', true);
 			} else {
@@ -801,8 +821,6 @@ var viewModel = function() {
 			}
 		});
 	});
-
-
 };
 
 /* Declare global objects */
