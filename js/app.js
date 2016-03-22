@@ -720,6 +720,18 @@ var viewModel = function() {
 		$('.set-time').focus();
 	};
 
+	vm.reset = function() {
+		vm.finishPlace().reset();
+		vm.journey().resetSunEvents();
+		vm.journey(undefined);
+		directionsDisplay.setMap(null);
+		directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true});
+		map.setCenter(vm.startPlace().latLng());
+
+		$('.set-time').toggleClass('hidden', false);
+		$('.reset').toggleClass('hidden', true);
+	};
+
 	vm.timer = function() {
 		if (!vm.departureTime() && !vm.journey()) {
 			vm.startPlace().createTime(Date.now());
@@ -758,6 +770,9 @@ var viewModel = function() {
 
 			/* Pass in nothing for evt or obj, but pass 'open' for actionCase so the menu gets closed if it's open */
 			vm.toggleMenu(null, null, 'open');
+			
+			$('.set-time').toggleClass('hidden', true);
+			$('.reset').toggleClass('hidden', false);
 		}
 	});
 
@@ -803,7 +818,7 @@ var viewModel = function() {
 	$(function() {
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
-			if (mq.matches) {
+			if (mq.matches || window.pageYOffset < 0) {
 				window.scrollTo(0, 0);
 			}
 		});
@@ -815,9 +830,13 @@ var viewModel = function() {
 				$('#hamburger').toggleClass('hidden', true);
 				$('.alert-container').toggleClass('hidden', true);
 			} else {
-				$('.nav-bar').toggleClass('hidden', false);
+				$('#nav-bar').toggleClass('hidden', false);
 				$('#hamburger').toggleClass('hidden', false);
 				$('.alert-container').toggleClass('hidden', false);
+			}
+
+			if (window.pageYOffset < 0) {
+				window.scrollTo(0, 0);
 			}
 		});
 	});

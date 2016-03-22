@@ -25,6 +25,7 @@
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row">
                         <button type="button" class="button set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
+                        <button type="button" class="button reset hidden" data-bind="click: $root.reset">Reset</button>
                         <button type="button" class="button" data-bind="click: displayWrite">Submit</button>
                     </div>
                 </div>
