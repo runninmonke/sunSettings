@@ -810,33 +810,35 @@ var viewModel = function() {
 	autocompleteStart.bindTo('bounds', map);
 	autocompleteFinish.bindTo('bounds', map);
 	
+	/* Select input text on focus */
 	$('body').on('focus', 'input', function(evt) {
-		evt.currentTarget.setSelectionRange(0, 999);
+		evt.target.setSelectionRange(0, 999);
+	});
+
+	/* Force focus event on click for browsers that don't */
+	$('body').on('click', 'input', function(evt) {
+			evt.target.focus();
 	});
 
 	/* Listener to deal with body overflow that occurs on iPhone in lanscape orientation*/
 	$(function() {
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
-			if (mq.matches || window.pageYOffset < 0) {
+			if (mq.matches) {
 				window.scrollTo(0, 0);
 			}
 		});
 
+		/* Hide menus on small screens when in landscape orientation */
 		window.addEventListener('resize', function() {
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
 			if (mq.matches) {
 				$('#nav-bar').toggleClass('hidden', true);
 				$('#hamburger').toggleClass('hidden', true);
-				$('.alert-container').toggleClass('hidden', true);
+				vm.showAlert(false);
 			} else {
 				$('#nav-bar').toggleClass('hidden', false);
 				$('#hamburger').toggleClass('hidden', false);
-				$('.alert-container').toggleClass('hidden', false);
-			}
-
-			if (window.pageYOffset < 0) {
-				window.scrollTo(0, 0);
 			}
 		});
 	});
