@@ -812,7 +812,8 @@ var viewModel = function() {
 	
 	/* Trigger resize event to deal with iPhone display issue that arrises otherwise */
 	autocompleteFinish.addListener('place_changed', function() {
-		$('window').resize();
+		window.dispatchEvent(new Event('resize'));
+		console.log('c');
 	});
 
 	/* Select input text on focus */
@@ -827,6 +828,11 @@ var viewModel = function() {
 			document.activeElement.setSelectionRange(0, 999);
 		}
 	});
+
+	/* Needed to make above click events work on iOS */
+	if ('ontouchstart' in window) {
+		$('input').css('cursor', 'pointer');
+	}
 
 	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation*/
 	$(function() {
@@ -848,11 +854,13 @@ var viewModel = function() {
 				$('#nav-bar').toggleClass('hidden', false);
 				$('#hamburger').toggleClass('hidden', false);
 			}
+			console.log('!');
 		});
 	});
 
+
 	/* Trigger resize event to ensure media queries above are applied on first load */
-	$('window').resize();
+	window.dispatchEvent(new Event('resize'));
 };
 
 /* Declare global objects */
