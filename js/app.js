@@ -812,8 +812,16 @@ var viewModel = function() {
 	
 	/* Trigger resize event to deal with iPhone display issue that arrises otherwise */
 	autocompleteFinish.addListener('place_changed', function() {
-		window.dispatchEvent(new Event('resize'));
-		console.log('c');
+		var n = document.createTextNode(' ');
+		var disp = document.body.style.display;
+
+		document.body.appendChild(n);
+		document.body.style.display = 'none';
+
+		setTimeout(function(){
+			document.body.style.display = disp;
+			n.parentNode.removeChild(n);
+		},20);
 	});
 
 	/* Select input text on focus */
@@ -829,38 +837,32 @@ var viewModel = function() {
 		}
 	});
 
-	/* Needed to make above click events work on iOS */
-	if ('ontouchstart' in window) {
-		$('input').css('cursor', 'pointer');
-	}
+	/* Hide menus on small screens when in landscape orientation */
+	vm.orientationDisplayAdjust = function() {
+		var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
+		if (mq.matches) {
+			$('#nav-bar').toggleClass('hidden', true);
+			$('#hamburger').toggleClass('hidden', true);
+		} else {
+			$('#nav-bar').toggleClass('hidden', false);
+			$('#hamburger').toggleClass('hidden', false);
+		}
+	};
+
+	window.addEventListener('resize', vm.orientationDisplayAdjust);
+
+	/* Ensure media queries above are applied on first load */
+	vm.orientationDisplayAdjust();
 
 	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation*/
 	$(function() {
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
-			if (mq.matches) {
+			if (mq.matches && !vm.showAlert()) {
 				window.scrollTo(0, 0);
 			}
 		});
-
-		/* Hide menus on small screens when in landscape orientation */
-		window.addEventListener('resize', function() {
-			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
-			if (mq.matches) {
-				$('#nav-bar').toggleClass('hidden', true);
-				$('#hamburger').toggleClass('hidden', true);
-				vm.showAlert(false);
-			} else {
-				$('#nav-bar').toggleClass('hidden', false);
-				$('#hamburger').toggleClass('hidden', false);
-			}
-			console.log('!');
-		});
 	});
-
-
-	/* Trigger resize event to ensure media queries above are applied on first load */
-	window.dispatchEvent(new Event('resize'));
 };
 
 /* Declare global objects */
