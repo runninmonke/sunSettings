@@ -810,17 +810,25 @@ var viewModel = function() {
 	autocompleteStart.bindTo('bounds', map);
 	autocompleteFinish.bindTo('bounds', map);
 	
+	/* Trigger resize event to deal with iPhone display issue that arrises otherwise */
+	autocompleteFinish.addListener('place_changed', function() {
+		$('window').resize();
+	});
+
 	/* Select input text on focus */
 	$('body').on('focus', 'input', function(evt) {
 		evt.target.setSelectionRange(0, 999);
 	});
 
-	/* Force focus event on click for browsers that don't */
-	$('body').on('click', 'input', function(evt) {
-			evt.target.focus();
+	/* Manually implement focus event actions on click for browsers that don't fire it */
+	$('body').on('click', 'input', function() {
+		if (!(vm.focusedElement == document.activeElement)) {
+			vm.focusedElement = document.activeElement;
+			document.activeElement.setSelectionRange(0, 999);
+		}
 	});
 
-	/* Listener to deal with body overflow that occurs on iPhone in lanscape orientation*/
+	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation*/
 	$(function() {
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
@@ -842,6 +850,9 @@ var viewModel = function() {
 			}
 		});
 	});
+
+	/* Trigger resize event to ensure media queries above are applied on first load */
+	$('window').resize();
 };
 
 /* Declare global objects */
