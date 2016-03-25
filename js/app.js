@@ -92,6 +92,8 @@ var Place = function(data) {
 	self.status = 'deselected';
 	self.content = '';
 
+
+	/* Deep copy template so object's infoWindow template content can be modified */
 	self.template = {};
 	for (item in contentTemplate) {
 		if (contentTemplate.hasOwnProperty(item)) {
@@ -378,6 +380,7 @@ var SunPlace = function(data) {
 	this.refineAttemps = 0;
 	
 	this.icon = icons[this.name];
+	this.finalized = false;
 };
 
 SunPlace.prototype = Object.create(Place.prototype);
@@ -387,6 +390,9 @@ SunPlace.prototype.finalize = function() {
 	this.template.time = contentTemplate.time;
 	this.setLatLng(this.latLng());
 	this.toggleSelected();
+	this.finalized = true;
+
+	vm.journey().finalize();
 };
 
 SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
@@ -469,6 +475,45 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	}
 };
 
+
+function findNextSunEvent (lastSunTime, sunTimes, latLng) {
+	var nextSunEvent = {};
+	nextSunEvent.time = new Date(lastSunTime);
+	var potentialTimes = [];
+	var eventsOfInterest = ['sunrise', 'sunset'];
+
+	/* Check for sun events that have yet to occur */
+	for (var i = 0; i < eventsOfInterest.length; i++) {
+		if (sunTimes[eventsOfInterest[i]].getTime() > lastSunTime) {
+			potentialTimes.push({time: sunTimes[eventsOfInterest[i]], name: eventsOfInterest[i]});
+		}
+	}
+
+	/* Find sun event yet to occur that will occur soonest */
+	var minTime = 99999999999999;
+	var iTime;
+
+	for (var j = 0; j < potentialTimes.length; j++) {
+		iTime = potentialTimes[j].time.getTime();
+		if (iTime < minTime) {
+			minTime = iTime;
+			nextSunEvent.time.setTime(iTime);
+			nextSunEvent.name = potentialTimes[j].name;
+		}
+	}
+
+	/* If no result, add 24 hours to the time the sun events are calculated from and re-try */
+	if (!nextSunEvent.hasOwnProperty('name')) {
+		var oneDayLater = new Date(nextSunEvent.time.getTime() + 86400000);
+		potentialTimes = SunCalc.getTimes(oneDayLater, latLng.lat(), latLng.lng());
+		nextSunEvent.nextDayTimes = potentialTimes;
+		nextSunEvent = findNextSunEvent(nextSunEvent.time.getTime(), potentialTimes);
+	}
+
+	return nextSunEvent;
+}
+
+
 /***************************/
 /****** Journey Class ******/
 /***************************/
@@ -500,80 +545,53 @@ Journey.prototype.resetSunEvents = function() {
 
 Journey.prototype.analyzeRoute = function() {
 	var self = this;
-	var eventsOfInterest = ['sunrise', 'sunset'];
-
-	var locationTime = new Date(this.startPlace().time.getTime());
-	var nextLocationTime = new Date(locationTime.getTime());
-	var sunEventTime = new Date(locationTime.getTime());
+	var locationTime = this.startPlace().time.getTime();
+	var nextLocationTime = locationTime;
+	var sunEvent = {};
+	sunEvent.time = new Date(locationTime);
 	var nextSunEventTime;
-	var sunEventName;
 
 	var path = this.route.routes[0].legs[0].steps;
-	var locationSunTimes = SunCalc.getTimes(sunEventTime, path[0].start_location.lat(), path[0].start_location.lng());
-
-
-	var findNextSunEvent = function(lastSunTime) {
-		var potentialTimes = [];
-
-		/* Check for sun events that have yet to occur */
-		for (var i = 0; i < eventsOfInterest.length; i++) {
-			if (locationSunTimes[eventsOfInterest[i]].getTime() > lastSunTime) {
-				potentialTimes.push({time: locationSunTimes[eventsOfInterest[i]], name: eventsOfInterest[i]});
-			}
-		}
-
-		/* Find sun event yet to occur that will occur soonest */
-		var minTime = 99999999999999;
-		var iTime;
-
-		for (var i = 0; i < potentialTimes.length; i++) {
-			iTime = potentialTimes[i].time.getTime();
-			if (iTime < minTime) {
-				minTime = iTime;
-				sunEventTime.setTime(iTime);
-				sunEventName = potentialTimes[i].name;
-			}
-		}
-
-		/* If no results, add 24 hours to the time the sun events are calculated from and re-try */
-		if (potentialTimes.length == 0) {
-			sunEventTime.setTime(sunEventTime.getTime() + 86400000);
-			locationSunTimes = SunCalc.getTimes(sunEventTime, path[0].start_location.lat(), path[0].start_location.lng());
-			findNextSunEvent(lastSunTime);
-		}
-	};
+	var locationSunTimes = SunCalc.getTimes(sunEvent.time, path[0].start_location.lat(), path[0].start_location.lng());
 
 	self.resetSunEvents();
 
-	findNextSunEvent(locationTime.getTime());
 	
-	/* Find next sun event on path and repeat until end is reached */
+	/* Find next sun event on path and repeat until end of path is reached */
 	var reachEnd;
 	while(path.length > 0) {
-		/* Check each section of path until next sun event is found */
+
+		sunEvent = findNextSunEvent(sunEvent.time.getTime(), locationSunTimes, path[0].start_location);
+
+		/* Update sunTimes if have progressed to next day */
+		if (sunEvent.hasOwnProperty('nextDayTimes')) {
+			locationSunTimes = sunEvent.nextDayTimes;
+		}
+
+		/* Check each section of path until next sun event time is reached */
 		reachEnd = true;
 		for (var i = 0; i < path.length; i++) {
-			nextLocationTime.setTime(locationTime.getTime() + (path[i].duration.value * 1000));
-			nextSunEventTime = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng())[sunEventName];
+			nextLocationTime = locationTime + (path[i].duration.value * 1000);
+			nextSunEventTime = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng())[sunEvent.name].getTime();
 
-			/* Set values for next iteration if no sun event occurs during current section */
-			if (nextSunEventTime.getTime() > nextLocationTime.getTime()) {
-				locationTime.setTime(nextLocationTime.getTime());
+			/* Set values for next iteration if no sun event occurs during current section. Otherwise create Place object for sunEvent */
+			if (nextSunEventTime > nextLocationTime) {
+				locationTime = nextLocationTime;
 
-				sunEventTime.setTime(nextSunEventTime.getTime());
-				locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
+				sunEvent.time.setTime(nextSunEventTime);
+				locationSunTimes = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng());
 			} else {
-				/* One last conditional necessary to make sure we are using a sun event time that will occur during the travel time of the current section */
-				if (sunEventTime.getTime() > nextLocationTime.getTime()) {
-					sunEventTime.setTime(nextSunEventTime.getTime());
-					locationSunTimes = SunCalc.getTimes(sunEventTime, path[i].end_location.lat(), path[i].end_location.lng());
+				/* Conditional necessary to make sure we are using a sun event time that will occur during the travel time of the current section */
+				if (sunEvent.time.getTime() > nextLocationTime) {
+					sunEvent.time.setTime(nextSunEventTime);
+					locationSunTimes = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng());
 				}
 
 				/* Create sun event and call the estimation of its location*/
-				var sunEvent = new SunPlace({name: sunEventName}); 
-				sunEvent.createTime(sunEventTime.getTime());
-				self.sunEvents.push(sunEvent);
-				sunEvent.refineEstimate(path[i], locationTime.getTime());
+				var newSunEventPlace = new SunPlace({name: sunEvent.name}); 
+				newSunEventPlace.createTime(sunEvent.time.getTime());
+				self.sunEvents.push(newSunEventPlace);
+				newSunEventPlace.refineEstimate(path[i], locationTime);
 
 				/* Remove path that has already been checked before next iteration */
 				path = path.slice(i);
@@ -585,10 +603,20 @@ Journey.prototype.analyzeRoute = function() {
 		if (reachEnd) {
 			break;
 		}
-
-
-		findNextSunEvent(sunEventTime.getTime());
 	}
+};
+
+Journey.prototype.finalize = function() {
+	/* Stop if all sunEvents are not finalized */
+	for (var i = 0; i < this.sunEvents.length; i++) {
+		if (!this.sunEvents[i].finalized) {
+			return;
+		}
+	}
+
+	var analysisTime = 0;
+	//while (analysisTime < vm.finishPlace().time.getTime());
+
 };
 
 Journey.prototype.getTravelTime = function() {
@@ -810,18 +838,10 @@ var viewModel = function() {
 	autocompleteStart.bindTo('bounds', map);
 	autocompleteFinish.bindTo('bounds', map);
 	
-	/* Trigger resize event to deal with iPhone display issue that arrises otherwise */
+	/* Deal with iPhone display bug that arrises otherwise */
 	autocompleteFinish.addListener('place_changed', function() {
-		var n = document.createTextNode(' ');
-		var disp = document.body.style.display;
-
-		document.body.appendChild(n);
-		document.body.style.display = 'none';
-
-		setTimeout(function(){
-			document.body.style.display = disp;
-			n.parentNode.removeChild(n);
-		},20);
+		$('.departure .field').focus();
+		$('.departure .field').blur();
 	});
 
 	/* Select input text on focus */
@@ -830,11 +850,15 @@ var viewModel = function() {
 	});
 
 	/* Manually implement focus event actions on click for browsers that don't fire it */
-	$('body').on('click', 'input', function() {
-		if (!(vm.focusedElement == document.activeElement)) {
-			vm.focusedElement = document.activeElement;
-			document.activeElement.setSelectionRange(0, 999);
-		}
+	$('body').on('mouseenter', 'input', function() {
+		setTimeout(function() {
+			if (!(vm.focusedElement == document.activeElement)) {
+				vm.focusedElement = document.activeElement;
+				if (document.activeElement.hasOwnProperty('setSelectionRange')) {
+					document.activeElement.setSelectionRange(0, 999);
+				}
+			}
+		}, 50);
 	});
 
 	/* Hide menus on small screens when in landscape orientation */
@@ -852,7 +876,7 @@ var viewModel = function() {
 	window.addEventListener('resize', vm.orientationDisplayAdjust);
 
 	/* Ensure media queries above are applied on first load */
-	vm.orientationDisplayAdjust();
+	window.addEventListener('load', vm.orientationDisplayAdjust);
 
 	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation*/
 	$(function() {
