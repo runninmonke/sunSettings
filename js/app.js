@@ -477,8 +477,11 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 
 
 function findNextSunEvent (lastSunTime, sunTimes, latLng) {
-	var nextSunEvent = {};
-	nextSunEvent.time = new Date(lastSunTime);
+	var nextSunEvent = {
+		time: new Date(lastSunTime),
+		sun: sunTimes,
+		latLng: latLng
+	};
 	var potentialTimes = [];
 	var eventsOfInterest = ['sunrise', 'sunset'];
 
@@ -505,9 +508,8 @@ function findNextSunEvent (lastSunTime, sunTimes, latLng) {
 	/* If no result, add 24 hours to the time the sun events are calculated from and re-try */
 	if (!nextSunEvent.hasOwnProperty('name')) {
 		var oneDayLater = new Date(nextSunEvent.time.getTime() + 86400000);
-		potentialTimes = SunCalc.getTimes(oneDayLater, latLng.lat(), latLng.lng());
-		nextSunEvent.nextDayTimes = potentialTimes;
-		nextSunEvent = findNextSunEvent(nextSunEvent.time.getTime(), potentialTimes);
+		nextSunEvent.sun = SunCalc.getTimes(oneDayLater, latLng.lat(), latLng.lng());
+		nextSunEvent = findNextSunEvent(nextSunEvent.time.getTime(), nextSunEvent.sun, latLng);
 	}
 
 	return nextSunEvent;
@@ -521,6 +523,9 @@ var Journey = function(start, finish) {
 	this.startPlace = start;
 	this.finishPlace = finish;
 	this.sunEvents = [];
+	this.sunlightChange = ko.observable();
+	this.duration = ko.observable();
+	this.distance = ko.observable();
 };
 
 Journey.prototype.loadRoute = function(route) {
@@ -529,7 +534,10 @@ Journey.prototype.loadRoute = function(route) {
 
 	directionsDisplay.setDirections(route);
 
-	this.finishPlace().createTime(this.startPlace().time.getTime() + this.getTravelTime());
+	this.duration(this.route.routes[0].legs[0].duration.value * 1000);
+	this.distance(this.route.routes[0].legs[0].distance.value);
+
+	this.finishPlace().createTime(this.duration());
 
 	this.analyzeRoute();
 };
@@ -547,12 +555,11 @@ Journey.prototype.analyzeRoute = function() {
 	var self = this;
 	var locationTime = this.startPlace().time.getTime();
 	var nextLocationTime = locationTime;
-	var sunEvent = {};
-	sunEvent.time = new Date(locationTime);
 	var nextSunEventTime;
 
 	var path = this.route.routes[0].legs[0].steps;
-	var locationSunTimes = SunCalc.getTimes(sunEvent.time, path[0].start_location.lat(), path[0].start_location.lng());
+	var sunEvent = {time: new Date(locationTime)};
+	sunEvent.sun = SunCalc.getTimes(sunEvent.time, path[0].start_location.lat(), path[0].start_location.lng());
 
 	self.resetSunEvents();
 
@@ -561,11 +568,11 @@ Journey.prototype.analyzeRoute = function() {
 	var reachEnd;
 	while(path.length > 0) {
 
-		sunEvent = findNextSunEvent(sunEvent.time.getTime(), locationSunTimes, path[0].start_location);
+		sunEvent = findNextSunEvent(sunEvent.time.getTime(), sunEvent.sun, path[0].start_location);
 
 		/* Update sunTimes if have progressed to next day */
 		if (sunEvent.hasOwnProperty('nextDayTimes')) {
-			locationSunTimes = sunEvent.nextDayTimes;
+			sunEvent.sun = sunEvent.nextDayTimes;
 		}
 
 		/* Check each section of path until next sun event time is reached */
@@ -579,12 +586,12 @@ Journey.prototype.analyzeRoute = function() {
 				locationTime = nextLocationTime;
 
 				sunEvent.time.setTime(nextSunEventTime);
-				locationSunTimes = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng());
+				sunEvent.sun = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng());
 			} else {
 				/* Conditional necessary to make sure we are using a sun event time that will occur during the travel time of the current section */
 				if (sunEvent.time.getTime() > nextLocationTime) {
 					sunEvent.time.setTime(nextSunEventTime);
-					locationSunTimes = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng());
+					sunEvent.sun = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng());
 				}
 
 				/* Create sun event and call the estimation of its location*/
@@ -614,22 +621,46 @@ Journey.prototype.finalize = function() {
 		}
 	}
 
-	var analysisTime = 0;
-	//while (analysisTime < vm.finishPlace().time.getTime());
+	var journeyPlaceAnalysis = {sunlight: 0, 
+		time: vm.startPlace().time.getTime()
+	};
+	var departurePlaceAnalysis = {sunlight: 0, 
+		time: journeyPlaceAnalysis.time,
+		sun: vm.startPlace().sun
+	};
+	var departurePlaceEvent = {sun: vm.startPlace().sun, 
+		latLng: vm.startPlace().latLng()
+	};
 
-};
+	/* Sum amount of sunlight during journey */
+	for (var j = 0; j < this.sunEvents.length; j++) {
+		if (this.sunEvents[j].name == 'sunset') {
+			journeyPlaceAnalysis.sunlight += this.sunEvents[j].time.getTime() - journeyPlaceAnalysis.time;
+		} 
+		journeyPlaceAnalysis.time = this.sunEvents[j].time.getTime();
 
-Journey.prototype.getTravelTime = function() {
-	if (this.hasOwnProperty('route')) {
-		var travelTime = 0;
-		var legs = this.route.routes[0].legs;
-		for (var i = 0; i < legs.length; i++) {
-			travelTime += legs[i].duration.value * 1000;
+		departurePlaceEvent = findNextSunEvent(departurePlaceAnalysis.time, departurePlaceEvent.sun, departurePlaceEvent.latLng );
+		
+		if (departurePlaceEvent.name == 'sunset') {
+			departurePlaceAnalysis.sunlight += departurePlaceEvent.time - departurePlaceAnalysis.time;
 		}
-		return travelTime;
-	} else {
-		return 0;
+		departurePlaceAnalysis.time = departurePlaceEvent.time;
 	}
+
+	/* Include remaining sunlight left in the day after arrival */
+	if (departurePlaceEvent.name == 'sunrise') {
+		departurePlaceEvent = findNextSunEvent(departurePlaceAnalysis.time, departurePlaceEvent.sun, departurePlaceEvent.latLng );
+		if (departurePlaceEvent.name == 'sunset') {
+			departurePlaceAnalysis.sunlight += departurePlaceEvent.time - departurePlaceAnalysis.time;
+		}
+
+		var arrivalPlaceEvent = findNextSunEvent(vm.finishPlace().time.getTime(), vm.finishPlace().sun, vm.finishPlace().latLng());
+		if (arrivalPlaceEvent.name == 'sunset') {
+			journeyPlaceAnalysis.sunlight += arrivalPlaceEvent.time - journeyPlaceAnalysis.time;
+		}	
+	}
+
+	this.sunlightChange(journeyPlaceAnalysis.sunlight - departurePlaceAnalysis.sunlight);
 };
 
 /************************/
@@ -756,7 +787,7 @@ var viewModel = function() {
 		directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true});
 		map.setCenter(vm.startPlace().latLng());
 
-		$('.set-time').toggleClass('hidden', false);
+		$('.arrival .submit').toggleClass('hidden', false);
 		$('.reset').toggleClass('hidden', true);
 	};
 
@@ -799,7 +830,7 @@ var viewModel = function() {
 			/* Pass in nothing for evt or obj, but pass 'open' for actionCase so the menu gets closed if it's open */
 			vm.toggleMenu(null, null, 'open');
 			
-			$('.set-time').toggleClass('hidden', true);
+			$('.arrival .submit').toggleClass('hidden', true);
 			$('.reset').toggleClass('hidden', false);
 		}
 	});
@@ -813,6 +844,26 @@ var viewModel = function() {
 			vm.journey().loadRoute(directionsRoute);
 		}
 	});
+
+	vm.showStats = ko.computed(function() {
+		if (vm.journey() && vm.journey().duration()) {
+			$('.journey').toggleClass('hidden', false);
+		} else {
+			$('.journey').toggleClass('hidden', true);
+		} 
+	});
+
+	vm.distanceDisplay = ko.pureComputed(function() {
+		if (vm.journey() && vm.journey().distance()) {
+			return Math.round(vm.journey().distance() * 0.000621371192) + ' miles';
+		}
+	});
+
+	vm.durationDisplay = ko.pureComputed(function() {
+		if (vm.journey() && vm.journey().duration()) {
+			return (Math.round(((vm.journey().duration() / 60000) + 1) * 100) / 100) + ' minutes';
+		}
+	});	
 
 	/* Variables for weather section display */
 	vm.conditionImg = ko.observable('');

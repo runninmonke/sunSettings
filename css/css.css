@@ -103,8 +103,7 @@ h3 {
 .search .button {
   float: right; }
 
-.search .button.set-time,
-.search .button.reset {
+.search .button.set-time {
   float: left; }
 
 /*** Info ***/

@@ -17,7 +17,7 @@
                     <div class="label">Start</div>
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row">
-                        <button type="button" class="button" data-bind="click: displayWrite">Submit</button>
+                        <button type="button" class="button submit" data-bind="click: displayWrite">Submit</button>
                     </div>
                 </div>
                 <div class="arrival row" data-bind="with: finishPlace">
@@ -26,13 +26,23 @@
                     <div class="row">
                         <button type="button" class="button set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
                         <button type="button" class="button reset hidden" data-bind="click: $root.reset">Reset</button>
-                        <button type="button" class="button" data-bind="click: displayWrite">Submit</button>
+                        <button type="button" class="button submit" data-bind="click: displayWrite">Submit</button>
                     </div>
                 </div>
             </section>
-            <section class="info hidden">
+            <section class="info">
+                <div class="journey">
+                    <div class="row">
+                        <div class="label">Travel time:</div>
+                        <div data-bind="text: durationDisplay"></div>
+                    </div>
+                    <div class="row">
+                        <div class="label">Distance:</div>
+                        <div data-bind="text: distanceDisplay"></div>
+                    </div>
+                </div>
             </section>
-            <section class="weather">
+            <section class="weather hidden">
                 <div class="cur-condition">
                     <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
                     <p class="cur-cond-text" data-bind="text: currentCondition">
