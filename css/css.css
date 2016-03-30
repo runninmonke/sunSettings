@@ -14,6 +14,8 @@ body {
 .row {
   width: 100%;
   overflow: hidden; }
+  .row div {
+    display: inline-block; }
 
 .label {
   padding: 1px;
@@ -107,9 +109,39 @@ h3 {
   float: left; }
 
 /*** Info ***/
-.info {
-  margin: 10px;
-  text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444; }
+.stats {
+  text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444;
+  padding-top: 25px; }
+
+.tabs {
+  padding: 1px;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-around;
+      -ms-flex-pack: distribute;
+          justify-content: space-around; }
+
+.data {
+  float: right;
+  padding: 1px; }
+
+.places div,
+.journey div {
+  font-size: 0.95em; }
+
+.selected,
+.deselected {
+  cursor: pointer;
+  pointer-events: all; }
+
+.selected {
+  color: black;
+  text-shadow: -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168, 0 -1px 1px #ffe168, -1px -1px 1px #ffe168, -1px 1px 1px #ffe168, 1px -1px 1px #ffe168, 1px 1px 1px #ffe168, -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168, 0 -1px 1px #ffe168, -1px -1px 1px #ffe168, -1px 1px 1px #ffe168, 1px -1px 1px #ffe168, 1px 1px 1px #ffe168, -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168; }
+
+.deselected {
+  font-size: 0.95em;
+  color: #eee; }
 
 /*** Weather ***/
 .weather {
@@ -151,11 +183,6 @@ h3 {
 
 .low-temp {
   color: #00b8e6; }
-
-/* Location list */
-.selected {
-  color: #ffe168;
-  text-shadow: -2px 0 2px #444, 0 2px 2px #444, 2px 0 2px #444, 0 -2px 2px #444, -2px -2px 2px #444, -2px 2px 2px #444, 2px -2px 2px #444, 2px 2px 2px #444, -2px 0 2px #444, 0 2px 2px #444, 2px 0 2px #444, 0 -2px 2px #444, -2px -2px 2px #444, -2px 2px 2px #444, 2px -2px 2px #444, 2px 2px 2px #444, -2px 0 2px #444, 0 2px 2px #444, 2px 0 2px #444, 0 -2px 2px #444, -2px -2px 2px #444, -2px 2px 2px #444, 2px -2px 2px #444, 2px 2px 2px #444, -2px 0 2px #444, 0 2px 2px #444, 2px 0 2px #444, 0 -2px 2px #444, -2px -2px 2px #444, -2px 2px 2px #444, 2px -2px 2px #444, 2px 2px 2px #444, -2px 0 2px #444, 0 2px 2px #444, 2px 0 2px #444, 0 -2px 2px #444, -2px -2px 2px #444, -2px 2px 2px #444, 2px -2px 2px #444, 2px 2px 2px #444; }
 
 /*** Map ***/
 #map {

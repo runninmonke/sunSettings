@@ -42,41 +42,8 @@ var Place = function(data) {
 
 	self.address = ko.observable();
 	self.latLng = ko.observable();
-
-	/* Display latLng if no address */
-	self.displayRead = ko.computed({
-		read: function() {
-			/* Display address if available */
-			if (this.address) {
-				return self.address();
-			} else if (self.latLngDisplay) {
-				return self.latLngDisplay;
-			}
-		},
-		write: function(){
-		},
-		owner: this
-	});
-
-	self.displayWrite = ko.computed({
-		read: function() {
-		},
-		write: function(){
-			self.setAddress($('.' + self.name + ' .field').val());
-		},
-		owner: this
-	});
-
-	self.keyHandler = function(data, evt) {
-		if (evt.keyCode == 13) {
-			self.setAddress(evt.target.value);
-		}
-
-		return true;
-	};
-
-
 	self.active = ko.observable(true);
+	self.hasSunDisplayTime = ko.observable(false);
 
 	/* Assigns to observable if it exists, otherwise regular assignment */
 	for (var item in data) {
@@ -207,6 +174,9 @@ Place.prototype.getWeather = function() {
 /* Calculate local sun times */
 Place.prototype.getSunTimes = function() {
 	this.sun = SunCalc.getTimes(this.time, this.latLng().lat(), this.latLng().lng());
+	
+	/* Set to false because time zone info display time isn't parsed until buildContent is called */
+	this.hasSunDisplayTime(false);
 };
 
 /* Get locale timezone information */
@@ -242,46 +212,61 @@ Place.prototype.createTime = function(newTime) {
 	}
 };
 
+/* Return a date object where the UTC time is actually the local timezone time. Objject includes additional useful properties like 'string' which is a formatted string of the time */
+function getDisplayTime(time, timeZoneOffset) {
+	var displayTime = new Date(time.getTime() + timeZoneOffset);
+	displayTime.meridie = 'AM';
+
+	displayTime.hours = displayTime.getUTCHours();
+	displayTime.minutes = displayTime.getUTCMinutes().toString();
+	displayTime.seconds = displayTime.getUTCSeconds().toString();
+
+	if (displayTime.hours > 12) {
+		displayTime.meridie = 'PM';
+		displayTime.hours = displayTime.hours - 12;
+	} else if (displayTime.hours == 12) {
+		displayTime.meridie = 'PM';
+	} else if (displayTime.hours == 0) {
+		displayTime.hours = '12';
+	}
+
+	if (displayTime.minutes.length < 2) {
+		displayTime.minutes = '0' + displayTime.minutes;
+	}
+
+	if (displayTime.seconds.length < 2) {
+		displayTime.seconds = '0' + displayTime.seconds;
+	}
+
+	displayTime.string = displayTime.hours + ':' + displayTime.minutes + ':' +  displayTime.seconds + ' ' + displayTime.meridie;
+
+	return displayTime;
+}
+
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
-	var timeZoneName = 'UTC';
-	this.displayTime.meridie = 'AM';
+	this.timeZoneName = 'UTC';
 
 	if (this.timeZone) {
-		timeZoneName = this.timeZone.timeZoneName;
-		this.displayTime.setTime(this.time.getTime() + (this.timeZone.rawOffset + this.timeZone.dstOffset) * 1000);
+		this.timeZoneName = this.timeZone.timeZoneName;
+		this.timeZoneOffset = (this.timeZone.rawOffset + this.timeZone.dstOffset) * 1000;
 	} else {
-		this.displayTime.setTime(this.time.getTime());
+		this.timeZoneOffset = 0;
 	}
 
-	this.displayTime.hours = this.displayTime.getUTCHours();
-	this.displayTime.minutes = this.displayTime.getUTCMinutes().toString();
-	this.displayTime.seconds = this.displayTime.getUTCSeconds().toString();
+	this.displayTime = getDisplayTime(this.time, this.timeZoneOffset);
 
-	if (this.displayTime.hours > 12) {
-		this.displayTime.meridie = 'PM';
-		this.displayTime.hours = this.displayTime.hours - 12;
-	} else if (this.displayTime.hours == 12) {
-		this.displayTime.meridie = 'PM';
-	} else if (this.displayTime.hours == 0) {
-		this.displayTime.hours = '12';
+	for (var item in this.sun) {
+		if (this.sun.hasOwnProperty(item)) {
+			this.sun[item].displayTime = getDisplayTime(this.sun[item], this.timeZoneOffset).string;
+		}
 	}
-
-	if (this.displayTime.minutes.length < 2) {
-		this.displayTime.minutes = '0' + this.displayTime.minutes;
-	}
-
-	if (this.displayTime.seconds.length < 2) {
-		this.displayTime.seconds = '0' + this.displayTime.seconds;
-	}
-
-	var displayTimeString = this.displayTime.hours + ':' + this.displayTime.minutes + ':' +  this.displayTime.seconds + ' ' + this.displayTime.meridie;
 
 	this.content = this.template.start;
 	this.content += this.template.name.replace('%text%', this.displayName);
 
-	this.content += this.template.time.replace('%time%', displayTimeString).replace('%timezone%', timeZoneName);
+	this.content += this.template.time.replace('%time%', this.displayTime.string).replace('%timezone%', this.timeZoneName);
 	this.content += this.template.end;
 
 	if (!icons.hasOwnProperty(this.name)) {
@@ -297,6 +282,8 @@ Place.prototype.buildContent = function() {
 	if (this.hasOwnProperty('marker')) {
 		this.marker.setOptions({icon: this.icon.img});
 	}
+
+	this.hasSunDisplayTime(true);
 };
 
 /* Use latLng data to create map marker */
@@ -351,6 +338,38 @@ var Waypoint = function(data) {
 	var self = this;
 
 	Place.call(self, data);
+
+		/* Display latLng if no address */
+	self.displayRead = ko.computed({
+		read: function() {
+			/* Display address if available */
+			if (this.address) {
+				return self.address();
+			} else if (self.latLngDisplay) {
+				return self.latLngDisplay;
+			}
+		},
+		write: function(){
+		},
+		owner: this
+	});
+
+	self.displayWrite = ko.computed({
+		read: function() {
+		},
+		write: function(){
+			self.setAddress($('.' + self.name + ' .field').val());
+		},
+		owner: this
+	});
+
+	self.keyHandler = function(data, evt) {
+		if (evt.keyCode == 13) {
+			self.setAddress(evt.target.value);
+		}
+
+		return true;
+	};
 
 	self.draggable = true;
 	/* Make sure marker is draggable in case creation is already complete */
@@ -537,7 +556,7 @@ Journey.prototype.loadRoute = function(route) {
 	this.duration(this.route.routes[0].legs[0].duration.value * 1000);
 	this.distance(this.route.routes[0].legs[0].distance.value);
 
-	this.finishPlace().createTime(this.duration());
+	this.finishPlace().createTime(this.startPlace().time.getTime() + this.duration());
 
 	this.analyzeRoute();
 };
@@ -663,6 +682,33 @@ Journey.prototype.finalize = function() {
 	this.sunlightChange(journeyPlaceAnalysis.sunlight - departurePlaceAnalysis.sunlight);
 };
 
+function getDurationString(time) {
+	var negSign = '';
+
+	if (time < 0) {
+		time = time * -1;
+		negSign = '-';
+	}
+
+	var hours = Math.floor(time/3600000);
+	var minutes = Math.floor(time/60000) % 60;
+	var seconds = Math.floor(time/1000) % 60;
+
+	minutes = minutes.toString();
+	seconds = seconds.toString();
+
+	if (minutes.length < 2) {
+		minutes = '0' + minutes;
+	}
+
+	if (seconds.length < 2) {
+		seconds = '0' + seconds;
+	}
+
+	var displayString = negSign + ' ' + hours + ':' + minutes + ':' + seconds;
+	return displayString;
+}
+
 /************************/
 /****** View Model ******/
 /************************/
@@ -783,12 +829,12 @@ var viewModel = function() {
 		vm.finishPlace().reset();
 		vm.journey().resetSunEvents();
 		vm.journey(undefined);
-		directionsDisplay.setMap(null);
-		directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true});
+		directionsDisplay.set('directions', null);
 		map.setCenter(vm.startPlace().latLng());
 
 		$('.arrival .submit').toggleClass('hidden', false);
 		$('.reset').toggleClass('hidden', true);
+		$('.tabs :first').click();
 	};
 
 	vm.timer = function() {
@@ -840,17 +886,64 @@ var viewModel = function() {
 	directionsDisplay.addListener('directions_changed', function() {
 		var directionsRoute = directionsDisplay.getDirections();
 
-		if (!directionsRoute.hasOwnProperty('notFromDrag')) {
+		if (directionsRoute && !directionsRoute.hasOwnProperty('notFromDrag')) {
 			vm.journey().loadRoute(directionsRoute);
 		}
 	});
 
-	vm.showStats = ko.computed(function() {
-		if (vm.journey() && vm.journey().duration()) {
+	vm.selectedTab = ko.observable(vm.startPlace());
+
+	vm.showPlace = ko.pureComputed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return true;
+		}
+	});
+	
+	vm.selectedSunrise = ko.pureComputed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return getDisplayTime(vm.selectedTab().sun.sunrise, vm.selectedTab().timeZoneOffset).string;
+		}
+	});
+
+	vm.selectedSunset = ko.pureComputed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return getDisplayTime(vm.selectedTab().sun.sunset, vm.selectedTab().timeZoneOffset).string;
+		}
+	});
+
+	vm.dayLength = ko.computed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return getDurationString(vm.selectedTab().sun.sunset.getTime() - vm.selectedTab().sun.sunrise.getTime());
+		}
+	});
+
+	vm.tabClick = function(obj, evt) {
+		var tab = evt.target.textContent;
+		if ((tab == 'Finish' && !vm.finishPlace().latLng()) || (tab == 'Travels' && !vm.journey())) {
+			return;
+		}
+
+		$('.tabs div').attr('class', 'deselected');
+		evt.target.className = 'selected';
+
+		if (tab == 'Travels') {
+			$('.places'). toggleClass('hidden', true);
 			$('.journey').toggleClass('hidden', false);
-		} else {
-			$('.journey').toggleClass('hidden', true);
-		} 
+			return;
+		} else if (tab == 'Start') {
+			vm.selectedTab(vm.startPlace());
+		} else if (tab == 'Finish') {
+			vm.selectedTab(vm.finishPlace());
+		}
+
+		$('.places'). toggleClass('hidden', false);
+		$('.journey').toggleClass('hidden', true);		
+	};
+
+	vm.daylightChangeDisplay = ko.pureComputed(function() {
+		if (vm.journey() && vm.journey().sunlightChange()) {
+			return getDurationString(vm.journey().sunlightChange());
+		}
 	});
 
 	vm.distanceDisplay = ko.pureComputed(function() {
@@ -861,9 +954,15 @@ var viewModel = function() {
 
 	vm.durationDisplay = ko.pureComputed(function() {
 		if (vm.journey() && vm.journey().duration()) {
-			return (Math.round(((vm.journey().duration() / 60000) + 1) * 100) / 100) + ' minutes';
+			return getDurationString(vm.journey().duration());
 		}
-	});	
+	});
+
+	vm.paceDisplay = ko.pureComputed(function() {
+		if (vm.journey() && vm.journey().distance()) {
+			return (Math.round(((vm.journey().distance() / vm.journey().duration()) * 2236.94) * 100) / 100) + ' mph';
+		}
+	});
 
 	/* Variables for weather section display */
 	vm.conditionImg = ko.observable('');

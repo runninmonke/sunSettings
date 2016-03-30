@@ -30,15 +30,43 @@
                     </div>
                 </div>
             </section>
-            <section class="info">
-                <div class="journey">
+            <section class="stats">
+                <div class="tabs row" data-bind="click: tabClick">
+                    <div class="selected">Start</div>
+                    <div class="deselected">Finish</div>
+                    <div class="deselected">Travels</div>
+                </div>
+                <hr>
+                <div class="places" data-bind="visible: showPlace">
+                    <div class="row">
+                        <div class="label">Sunrise:</div>
+                        <div class="data" data-bind="text: selectedSunrise"></div>
+                    </div>
+                    <div class="row">
+                        <div class="label">Sunset:</div>
+                        <div class="data" data-bind="text: selectedSunset"></div>
+                    </div>
+                    <div class="row">
+                        <div class="label">Daylength:</div>
+                        <div class="data" data-bind="text: dayLength"></div>
+                    </div>
+                </div>
+                <div class="journey hidden">
+                    <div class="row">
+                        <div class="label">Daylight gain/loss:</div>
+                        <div class="data" data-bind="text: daylightChangeDisplay"></div>
+                    </div>
                     <div class="row">
                         <div class="label">Travel time:</div>
-                        <div data-bind="text: durationDisplay"></div>
+                        <div class="data" data-bind="text: durationDisplay"></div>
                     </div>
                     <div class="row">
                         <div class="label">Distance:</div>
-                        <div data-bind="text: distanceDisplay"></div>
+                        <div class="data" data-bind="text: distanceDisplay"></div>
+                    </div>
+                    <div class="row">
+                        <div class="label">Pace:</div>
+                        <div class="data" data-bind="text: paceDisplay"></div>
                     </div>
                 </div>
             </section>
