@@ -13,20 +13,25 @@
     <body>
         <div id="nav-bar" data-bind="attr: {class: menuStatus}">
             <section class="search">
+                <div class="travel-mode row" data-bind="click: travelModeClick">
+                    <button type="text" value="WALKING" class="button">🚶</button>
+                    <button type="text" value="BICYCLING" class="button">🚲</button>
+                    <button type="text" value="DRIVING" class="button selected">🚗</button>
+                </div>                    
                 <div class="departure row" data-bind="with: startPlace">
                     <div class="label">Start</div>
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row">
-                        <button type="button" class="button submit" data-bind="click: displayWrite">Submit</button>
+                        <button type="button" class="submit" data-bind="click: displayWrite">Submit</button>
                     </div>
                 </div>
                 <div class="arrival row" data-bind="with: finishPlace">
                     <div class="label">Finish</div>
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row">
-                        <button type="button" class="button set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
-                        <button type="button" class="button reset hidden" data-bind="click: $root.reset">Reset</button>
-                        <button type="button" class="button submit" data-bind="click: displayWrite">Submit</button>
+                        <button type="button" class="set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
+                        <button type="button" class="reset hidden" data-bind="click: $root.reset">Reset</button>
+                        <button type="button" class="submit" data-bind="click: displayWrite">Submit</button>
                     </div>
                 </div>
             </section>
@@ -114,7 +119,7 @@
                             </div>
                         </form>
                     </div>
-                    <button type="button" class="button time-button" data-bind="click: removeDepartureTime">Use current time</button>
+                    <button type="button" class="time-button" data-bind="click: removeDepartureTime">Use current time</button>
                     <button type="button" class="button" data-bind="click: setDepartureTime">Submit</button>
                 </div>
             </div>

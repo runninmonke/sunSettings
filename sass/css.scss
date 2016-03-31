@@ -34,7 +34,7 @@ body {
                 1px 0 1px #444;
 }
 
-.button {
+button {
   border: none;
   background-color: $menu-item;
   width: auto;
@@ -119,16 +119,27 @@ h3 {
 
 /*** Search ***/
 
+.travel-mode {
+  margin: 0 0 -10px 0;
+  padding-bottom: -10px;
+  bottom: -10px;
+  button {
+    padding: 2px 10px;
+    margin: 0 10px;
+    font-size: 1.1em;
+  }
+}
+
 .search {
   .arrival {
     margin-top: -15px;
   }
 
-  .button {
+  button {
     float: right;
   }
 
-  .button.set-time {
+  button.set-time {
     float: left;
   }
 }
@@ -281,7 +292,7 @@ h3 {
     margin: auto;
   }
 
-  .button {
+  button {
     position: relative;
     float: right;
     background: rgba(76, 76, 76, 0.9);

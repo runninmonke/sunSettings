@@ -28,7 +28,7 @@ var GetRoute = function(origin, destination, callback) {
 	var data = {
 		origin: origin,
 		destination: destination,
-		travelMode: google.maps.TravelMode.DRIVING
+		travelMode: google.maps.TravelMode[vm.travelMode()]
 	};
 	
 	directionsService.route(data, callback);
@@ -283,7 +283,9 @@ Place.prototype.buildContent = function() {
 		this.marker.setOptions({icon: this.icon.img});
 	}
 
-	this.hasSunDisplayTime(true);
+	if (!this.hasSunDisplayTime()) {
+		this.hasSunDisplayTime(true);
+	}
 };
 
 /* Use latLng data to create map marker */
@@ -627,6 +629,10 @@ Journey.prototype.analyzeRoute = function() {
 		}
 
 		if (reachEnd) {
+			if (self.sunEvents.length == 0) {
+				self.finalize();
+			}
+
 			break;
 		}
 	}
@@ -640,6 +646,8 @@ Journey.prototype.finalize = function() {
 		}
 	}
 
+
+	/* Initialize objects for summing sunlight during journey for comparison */
 	var journeyPlaceAnalysis = {sunlight: 0, 
 		time: vm.startPlace().time.getTime()
 	};
@@ -647,6 +655,8 @@ Journey.prototype.finalize = function() {
 		time: journeyPlaceAnalysis.time,
 		sun: vm.startPlace().sun
 	};
+
+	/* Object that will be updated with sunEvent info of the events that occur at the departure place during the journey */
 	var departurePlaceEvent = {sun: vm.startPlace().sun, 
 		latLng: vm.startPlace().latLng()
 	};
@@ -667,16 +677,14 @@ Journey.prototype.finalize = function() {
 	}
 
 	/* Include remaining sunlight left in the day after arrival */
-	if (departurePlaceEvent.name == 'sunrise') {
-		departurePlaceEvent = findNextSunEvent(departurePlaceAnalysis.time, departurePlaceEvent.sun, departurePlaceEvent.latLng );
-		if (departurePlaceEvent.name == 'sunset') {
-			departurePlaceAnalysis.sunlight += departurePlaceEvent.time - departurePlaceAnalysis.time;
-		}
+	departurePlaceEvent = findNextSunEvent(departurePlaceAnalysis.time, departurePlaceEvent.sun, departurePlaceEvent.latLng );
+	if (departurePlaceEvent.name == 'sunset') {
+		departurePlaceAnalysis.sunlight += departurePlaceEvent.time - departurePlaceAnalysis.time;
+	}
 
-		var arrivalPlaceEvent = findNextSunEvent(vm.finishPlace().time.getTime(), vm.finishPlace().sun, vm.finishPlace().latLng());
-		if (arrivalPlaceEvent.name == 'sunset') {
-			journeyPlaceAnalysis.sunlight += arrivalPlaceEvent.time - journeyPlaceAnalysis.time;
-		}	
+	var arrivalPlaceEvent = findNextSunEvent(vm.finishPlace().time.getTime(), vm.finishPlace().sun, vm.finishPlace().latLng());
+	if (arrivalPlaceEvent.name == 'sunset') {
+		journeyPlaceAnalysis.sunlight += arrivalPlaceEvent.time - journeyPlaceAnalysis.time;
 	}
 
 	this.sunlightChange(journeyPlaceAnalysis.sunlight - departurePlaceAnalysis.sunlight);
@@ -718,6 +726,7 @@ var viewModel = function() {
 	vm.finishPlace = ko.observable(new Waypoint({name: 'arrival'}));
 	vm.journey = ko.observable();
 	vm.departureTime = ko.observable();
+	vm.travelMode = ko.observable('DRIVING');
 
 	/* Increase map zoom level on large displays */
 	if (window.matchMedia('(min-width: 700px)').matches) {
@@ -872,9 +881,6 @@ var viewModel = function() {
 			vm.journey(new Journey(vm.startPlace, vm.finishPlace));
 
 			GetRoute(vm.startPlace().latLng(), vm.finishPlace().latLng(), vm.directionsCallback);
-
-			/* Pass in nothing for evt or obj, but pass 'open' for actionCase so the menu gets closed if it's open */
-			vm.toggleMenu(null, null, 'open');
 			
 			$('.arrival .submit').toggleClass('hidden', true);
 			$('.reset').toggleClass('hidden', false);
@@ -890,6 +896,14 @@ var viewModel = function() {
 			vm.journey().loadRoute(directionsRoute);
 		}
 	});
+
+	vm.travelModeClick = function(obj, evt) {
+		if (evt.target.tagName == "BUTTON") {
+			vm.travelMode(evt.target.value);
+			$('.travel-mode button').attr('class', 'deselected');
+			evt.target.className = 'selected';
+		}
+	};
 
 	vm.selectedTab = ko.observable(vm.startPlace());
 
@@ -941,7 +955,8 @@ var viewModel = function() {
 	};
 
 	vm.daylightChangeDisplay = ko.pureComputed(function() {
-		if (vm.journey() && vm.journey().sunlightChange()) {
+		if (vm.journey() && $.isNumeric(vm.journey().sunlightChange())) {
+			$('.tabs :last').click();
 			return getDurationString(vm.journey().sunlightChange());
 		}
 	});
