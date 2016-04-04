@@ -739,7 +739,7 @@ var viewModel = function() {
 	vm.inputStart = function() {
 		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field').val()}));
 
-		$('.start-content').toggleClass('hidden', true);
+		$('.start-container').toggleClass('hidden', true);
 		vm.showAlert(false);
 
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
@@ -753,7 +753,7 @@ var viewModel = function() {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 				
 			vm.startPlace().setLatLng(latLng);
-			$('.start-content').toggleClass('hidden', true);
+			$('.start-container').toggleClass('hidden', true);
 			vm.showAlert(false);
 			$('.arrival input').focus();
 		}
@@ -782,24 +782,44 @@ var viewModel = function() {
 
 	vm.toggleMenu();
 
-	vm.showTimeSettings = function() {
-		var currentTime = vm.departureTime() || vm.startPlace().time;
+	vm.travelModeClick = function(obj, evt) {
+		if (evt.target.tagName == "BUTTON") {
+			vm.travelMode(evt.target.value);
+			$('.travel-mode button').attr('class', 'deselected');
+			evt.target.className = 'selected';
+		}
+	};
 
+	vm.showTimeSettings = function() {
+		$('.message').text(this.displayName);
 		$('.alert-window').css('width', '210px');
 		$('.alert-window').css('min-width', '210px');
-		$('.time-content').toggleClass('hidden', false);
+		$('.time-container').toggleClass('hidden', false);
 
-		$('.month').val(vm.startPlace().displayTime.getUTCMonth() + 1);
-		$('.day').val(vm.startPlace().displayTime.getUTCDate());
-		$('.year').val(vm.startPlace().displayTime.getUTCFullYear());
+		$('.month').val(this.displayTime.getUTCMonth() + 1);
+		$('.day').val(this.displayTime.getUTCDate());
+		$('.year').val(this.displayTime.getUTCFullYear());
 
-		$('.hours').val(vm.startPlace().displayTime.hours);
-		$('.minutes').val(vm.startPlace().displayTime.minutes);
-		$('.seconds').val(vm.startPlace().displayTime.seconds);
+		$('.hours').val(this.displayTime.hours);
+		$('.minutes').val(this.displayTime.minutes);
+		$('.seconds').val(this.displayTime.seconds);
 
-		$('.meridies').val(vm.startPlace().displayTime.meridie);
+		$('.meridies').val(this.displayTime.meridie);
 
-		$('.form-container').toggleClass('hidden', true);
+		$('.alert-window .submit').off();
+
+		if (this.name == 'arrival') {
+			$('.alert-window .cancel').toggleClass('hidden', false);
+			$('.alert-window .current').toggleClass('hidden', true);
+			$('.alert-window .submit').click(vm.setArrivalTime);
+		} else if (this.name == 'departure') {
+			$('.alert-window .cancel').toggleClass('hidden', true);
+			$('.alert-window .current').toggleClass('hidden', false);
+			$('.alert-window .submit').click(vm.setDepartureTime);
+		} else {
+			alert('Error: Invlid place for time setting');
+		}
+
 		vm.showAlert(true);
 		$('.date').focus();
 	};
@@ -821,10 +841,14 @@ var viewModel = function() {
 		vm.startPlace().createTime(vm.departureTime().getTime());
 		vm.startPlace().buildContent();
 
-		$('.time-content').toggleClass('hidden', true);
+		$('.time-container').toggleClass('hidden', true);
 		vm.showAlert(false);
 
 		$('.set-time').focus();
+	};
+
+	vm.setArrivalTime = function() {
+		vm.changePace();
 	};
 
 	vm.removeDepartureTime = function() {
@@ -841,9 +865,33 @@ var viewModel = function() {
 		directionsDisplay.set('directions', null);
 		map.setCenter(vm.startPlace().latLng());
 
-		$('.arrival .submit').toggleClass('hidden', false);
 		$('.reset').toggleClass('hidden', true);
+		$('.return-trip').toggleClass('hidden', true);
+		$('.arrival .set-time').toggleClass('hidden', true);
 		$('.tabs :first').click();
+	};
+
+	vm.showPaceSettings = function() {
+		$('.pace .data').attr('style', 'display: none');
+		$('.pace input').toggleClass('hidden', false);
+		$('.show-set-pace').toggleClass('hidden', true);
+		$('.set-pace').toggleClass('hidden', false);
+	};
+
+	vm.changePace = function() {
+		alert('TODO: Change Pace');
+		$('.pace .data').attr('style', '');
+		$('.pace input').toggleClass('hidden', true);
+		$('.show-set-pace').toggleClass('hidden', false);
+		$('.set-pace').toggleClass('hidden', true);
+	};
+
+	vm.cancelTime = function() {
+		vm.showAlert(false);
+	};
+
+	vm.getReturnTrip = function() {
+		alert('TODO: Get rturn trip');
 	};
 
 	vm.timer = function() {
@@ -882,8 +930,9 @@ var viewModel = function() {
 
 			GetRoute(vm.startPlace().latLng(), vm.finishPlace().latLng(), vm.directionsCallback);
 			
-			$('.arrival .submit').toggleClass('hidden', true);
 			$('.reset').toggleClass('hidden', false);
+			$('.return-trip').toggleClass('hidden', false);
+			$('.arrival .set-time').toggleClass('hidden', false);
 		}
 	});
 
@@ -896,14 +945,6 @@ var viewModel = function() {
 			vm.journey().loadRoute(directionsRoute);
 		}
 	});
-
-	vm.travelModeClick = function(obj, evt) {
-		if (evt.target.tagName == "BUTTON") {
-			vm.travelMode(evt.target.value);
-			$('.travel-mode button').attr('class', 'deselected');
-			evt.target.className = 'selected';
-		}
-	};
 
 	vm.selectedTab = ko.observable(vm.startPlace());
 

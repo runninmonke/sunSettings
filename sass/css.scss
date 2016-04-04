@@ -26,6 +26,7 @@ body {
   }
 }
 
+
 .label {
   padding: 1px;
   color: #ffe168;  
@@ -34,16 +35,23 @@ body {
                 1px 0 1px #444;
 }
 
+.buttons {
+  margin: 0 -2px;
+  width: calc(100% + 4px)
+}
+
 button {
   border: none;
+  border-radius: 2px;
+  font-size: 0.8em;
+  color: white;
   background-color: $menu-item;
   width: auto;
-  font-size: 0.8em;
   padding: 5px;
-  border-radius: 2px;
+  margin: 2px;
+  float: right;
   pointer-events: all;
   cursor: pointer;
-  color: white;
 }
 
 .field {
@@ -112,7 +120,7 @@ h3 {
 
 .icon {
   font-size: 65px;
-  font-weight: lighter;
+  font-weight: bolder;
   margin: -10px 0 0 5px;
   color: $menu-item;
 }
@@ -121,23 +129,14 @@ h3 {
 
 .travel-mode {
   margin: 0 0 -10px 0;
-  padding-bottom: -10px;
-  bottom: -10px;
   button {
     padding: 2px 10px;
-    margin: 0 10px;
     font-size: 1.1em;
+    margin: 0 5px;
   }
 }
 
 .search {
-  .arrival {
-    margin-top: -15px;
-  }
-
-  button {
-    float: right;
-  }
 
   button.set-time {
     float: left;
@@ -151,6 +150,10 @@ h3 {
                 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444,
                 1px 0 1px #444;
   padding-top: 25px;
+
+  button {
+    margin-right: 0;
+  }
 }
 
 .tabs {
@@ -184,7 +187,16 @@ h3 {
 
 .deselected {
   font-size: 0.95em;
-  color: #eee;
+  color: #ddd;
+}
+
+.pace input {
+  width: 65px;
+  float: right;
+  margin-right: -1px;
+  text-align: right;
+  cursor: text;
+  pointer-events: all;
 }
 
 /*** Weather ***/
@@ -284,17 +296,19 @@ h3 {
   display: flex-wrap;
   color: white;
     
-  .message {
+  .content {
     font-size: 1em;
     padding: 0 0 7px 0;
     width: 95%;
     text-align: center;
     margin: auto;
   }
+  
+  .form-container {
+    padding-top: 15px;
+  }
 
   button {
-    position: relative;
-    float: right;
     background: rgba(76, 76, 76, 0.9);
   }
 
@@ -327,10 +341,6 @@ h3 {
 
   .year {
     width: 2.3em;
-  }
-
-  .form-container {
-    text-align: center;
   }
 
   .time-button {

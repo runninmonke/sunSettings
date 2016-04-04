@@ -21,17 +21,19 @@
                 <div class="departure row" data-bind="with: startPlace">
                     <div class="label">Start</div>
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
-                    <div class="row">
+                    <div class="row buttons">
+                        <button type="button" class="set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
                         <button type="button" class="submit" data-bind="click: displayWrite">Submit</button>
+                        <button type="button" class="reset hidden" data-bind="click: $root.reset">Reset</button>
                     </div>
                 </div>
                 <div class="arrival row" data-bind="with: finishPlace">
                     <div class="label">Finish</div>
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
-                    <div class="row">
-                        <button type="button" class="set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
-                        <button type="button" class="reset hidden" data-bind="click: $root.reset">Reset</button>
+                    <div class="row buttons">
+                        <button type="button" class="set-time hidden" data-bind="click: $root.showTimeSettings">Set arrival time</button>
                         <button type="button" class="submit" data-bind="click: displayWrite">Submit</button>
+                        <button type="button" class="return-trip hidden" data-bind="click: $root.getReturnTrip">Return trip</button>
                     </div>
                 </div>
             </section>
@@ -69,10 +71,13 @@
                         <div class="label">Distance:</div>
                         <div class="data" data-bind="text: distanceDisplay"></div>
                     </div>
-                    <div class="row">
+                    <div class="pace row">
                         <div class="label">Pace:</div>
                         <div class="data" data-bind="text: paceDisplay"></div>
+                        <input type="text" class="hidden">
                     </div>
+                    <button type="button" class="show-set-pace" data-bind="click: showPaceSettings">Change pace</button>
+                    <button type="button" class="set-pace hidden" data-bind="click: changePace">Submit</button>
                 </div>
             </section>
             <section class="weather hidden">
@@ -93,34 +98,34 @@
         </div>
         <div class="alert-container" data-bind="visible: showAlert">
             <div class="alert-window">
-                <div class="start-content">
+                <div class="start-container content">
                     <div class="message label">Allow geolocation or enter starting location:</div>
                     <div class="form-container">
                         <input type="text" class="field" placeholder="">
                         <button type="button" class="button" data-bind="click: inputStart">Submit</button>
                     </div>
                 </div>
-                <div class="time-content hidden">
-                    <div class="message label">Departure
-                        <form>
-                            <div class="date">Date:
-                                <input type="text" class="field month"><span>/</span>
-                                <input type="text" class="field day"><span>/</span>
-                                <input type="text" class="field year">
-                            </div>
-                            <div class="time">Time:
-                                <input type="text" class="field hours"><span>:</span>
-                                <input type="text" class="field minutes"><span>:</span>
-                                <input type="text" class="field seconds">
-                                <select class="field meridies">
-                                    <option value="AM">AM</option>
-                                    <option value="PM">PM</option>
-                                </select>
-                            </div>
-                        </form>
-                    </div>
-                    <button type="button" class="time-button" data-bind="click: removeDepartureTime">Use current time</button>
-                    <button type="button" class="button" data-bind="click: setDepartureTime">Submit</button>
+                <div class="time-container content hidden">
+                    <div class="message label"></div>
+                    <form>
+                        <div class="date label">Date:
+                            <input type="text" class="field month"><span>/</span>
+                            <input type="text" class="field day"><span>/</span>
+                            <input type="text" class="field year">
+                        </div>
+                        <div class="time label">Time:
+                            <input type="text" class="field hours"><span>:</span>
+                            <input type="text" class="field minutes"><span>:</span>
+                            <input type="text" class="field seconds">
+                            <select class="field meridies">
+                                <option value="AM">AM</option>
+                                <option value="PM">PM</option>
+                            </select>
+                        </div>
+                    </form>
+                    <button type="button" class="current time-button" data-bind="click: removeDepartureTime">Use current time</button>
+                    <button type="button" class="cancel time-button" data-bind="click: cancelTime">Cancel</button>
+                    <button type="button" class="submit button">Submit</button>
                 </div>
             </div>
         </div>
