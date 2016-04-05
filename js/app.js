@@ -424,7 +424,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	var eventLocationEstimate;
 	var previousEstimate = -2;
 	while(true) {
-		eventLocationEstimate = (self.time.getTime() - startTime) / (pathSection.duration.value * 1000);
+		eventLocationEstimate = (self.time.getTime() - startTime) / (pathSection.duration.value * vm.paceMultiplier());
 		eventLocationEstimate = Math.round(pathSection.path.length * eventLocationEstimate);
 
 		/* Make sure estimated sun time doesn't leave path range */
@@ -469,7 +469,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 				}
 			}
 
-			var arrivalTime = startTime + newPathSection.duration.value * 1000;
+			var arrivalTime = startTime + newPathSection.duration.value * vm.paceMultiplier();
 			self.estimateError = self.time.getTime() - arrivalTime;
 			if (self.estimateError > ESTIMATE_RANGE) {
 				newPathSection.path = pathSection.path.slice(eventLocationEstimate);
@@ -553,9 +553,10 @@ Journey.prototype.loadRoute = function(route) {
 	this.route = route;
 	this.route.notFromDrag = true;
 
+	directionsDisplay.set('directions', null);
 	directionsDisplay.setDirections(route);
 
-	this.duration(this.route.routes[0].legs[0].duration.value * 1000);
+	this.duration(this.route.routes[0].legs[0].duration.value * vm.paceMultiplier());
 	this.distance(this.route.routes[0].legs[0].distance.value);
 
 	this.finishPlace().createTime(this.startPlace().time.getTime() + this.duration());
@@ -599,7 +600,7 @@ Journey.prototype.analyzeRoute = function() {
 		/* Check each section of path until next sun event time is reached */
 		reachEnd = true;
 		for (var i = 0; i < path.length; i++) {
-			nextLocationTime = locationTime + (path[i].duration.value * 1000);
+			nextLocationTime = locationTime + (path[i].duration.value * vm.paceMultiplier());
 			nextSunEventTime = SunCalc.getTimes(sunEvent.time, path[i].end_location.lat(), path[i].end_location.lng())[sunEvent.name].getTime();
 
 			/* Set values for next iteration if no sun event occurs during current section. Otherwise create Place object for sunEvent */
@@ -727,6 +728,7 @@ var viewModel = function() {
 	vm.journey = ko.observable();
 	vm.departureTime = ko.observable();
 	vm.travelMode = ko.observable('DRIVING');
+	vm.paceMultiplier = ko.observable(1000);
 
 	/* Increase map zoom level on large displays */
 	if (window.matchMedia('(min-width: 700px)').matches) {
@@ -790,6 +792,21 @@ var viewModel = function() {
 		}
 	};
 
+	vm.reset = function() {
+		vm.finishPlace().reset();
+		vm.journey().resetSunEvents();
+		vm.journey(undefined);
+		vm.paceMultiplier(1000);
+		directionsDisplay.set('directions', null);
+		map.setCenter(vm.startPlace().latLng());
+
+		$('.reset').toggleClass('hidden', true);
+		$('.return-trip').toggleClass('hidden', true);
+		$('.arrival .set-time').toggleClass('hidden', true);
+		$('.tabs :first').click();
+		vm.hidePaceSettings();
+	};
+
 	vm.showTimeSettings = function() {
 		$('.message').text(this.displayName);
 		$('.alert-window').css('width', '210px');
@@ -824,9 +841,7 @@ var viewModel = function() {
 		$('.date').focus();
 	};
 
-	/* TODO: Add error handling */
-	vm.setDepartureTime = function() {
-		
+	vm.getNewTime = function() {
 		var newHours = $('.hours').val();
 		if ($('.meridies').val() == 'PM' && newHours < 12) {
 			newHours = newHours * 1 + 12;
@@ -836,19 +851,21 @@ var viewModel = function() {
 
 		var newMonth = $('.month').val() - 1;
 
-		vm.departureTime(new Date($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val()));
+		return new Date(Date.UTC($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val()));
+	};
+
+	/* TODO: Add error handling */
+	vm.setDepartureTime = function() {
+		var newTime = vm.getNewTime();
+		newTime.setTime(newTime.getTime() + (-1 * vm.startPlace().timeZoneOffset));
 		
-		vm.startPlace().createTime(vm.departureTime().getTime());
-		vm.startPlace().buildContent();
+		vm.departureTime(newTime);
+		vm.startPlace().createTime(newTime.getTime());
 
 		$('.time-container').toggleClass('hidden', true);
 		vm.showAlert(false);
 
-		$('.set-time').focus();
-	};
-
-	vm.setArrivalTime = function() {
-		vm.changePace();
+		$('.departure .set-time').focus();
 	};
 
 	vm.removeDepartureTime = function() {
@@ -858,32 +875,42 @@ var viewModel = function() {
 		$('.set-time').focus();
 	};
 
-	vm.reset = function() {
-		vm.finishPlace().reset();
-		vm.journey().resetSunEvents();
-		vm.journey(undefined);
-		directionsDisplay.set('directions', null);
-		map.setCenter(vm.startPlace().latLng());
 
-		$('.reset').toggleClass('hidden', true);
-		$('.return-trip').toggleClass('hidden', true);
-		$('.arrival .set-time').toggleClass('hidden', true);
-		$('.tabs :first').click();
+	vm.setArrivalTime = function() {
+		var newTime = vm.getNewTime();
+		newTime.setTime(newTime.getTime() + (-1 * vm.finishPlace().timeZoneOffset));
+
+		var newPace = (newTime.getTime() - vm.startPlace().time.getTime()) / vm.journey().duration();
+
+		newPace = newPace * vm.paceMultiplier();
+
+		$('.time-container').toggleClass('hidden', true);
+		vm.showAlert(false);
+
+		$('.arrival .set-time').focus();
+		vm.changePace({}, {}, newPace);
 	};
 
 	vm.showPaceSettings = function() {
 		$('.pace .data').attr('style', 'display: none');
-		$('.pace input').toggleClass('hidden', false);
+		$('.pace input').toggleClass('hidden', false).focus();
+		$('.pace input')[0].value = vm.formattedPace;
+		$('.pace input')[0].setSelectionRange(0, 999);
 		$('.show-set-pace').toggleClass('hidden', true);
 		$('.set-pace').toggleClass('hidden', false);
 	};
 
-	vm.changePace = function() {
-		alert('TODO: Change Pace');
+	vm.hidePaceSettings = function() {
 		$('.pace .data').attr('style', '');
 		$('.pace input').toggleClass('hidden', true);
 		$('.show-set-pace').toggleClass('hidden', false);
 		$('.set-pace').toggleClass('hidden', true);
+	};
+
+	vm.changePace = function(obj, evt, newPace) {
+		newPace = newPace || vm.paceMph / $('.pace input')[0].value * vm.paceMultiplier();
+		vm.paceMultiplier(newPace);
+		vm.hidePaceSettings;
 	};
 
 	vm.cancelTime = function() {
@@ -917,7 +944,7 @@ var viewModel = function() {
 
 	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
 	vm.getJourney = ko.computed(function() {
-		if (vm.startPlace().latLng() && vm.finishPlace().latLng()) {
+		if (vm.startPlace().latLng() && vm.finishPlace().latLng() && vm.paceMultiplier()) {
 			if (vm.journey()) {
 				vm.journey().resetSunEvents();
 			}
@@ -933,6 +960,7 @@ var viewModel = function() {
 			$('.reset').toggleClass('hidden', false);
 			$('.return-trip').toggleClass('hidden', false);
 			$('.arrival .set-time').toggleClass('hidden', false);
+			vm.hidePaceSettings();
 		}
 	});
 
@@ -1016,7 +1044,9 @@ var viewModel = function() {
 
 	vm.paceDisplay = ko.pureComputed(function() {
 		if (vm.journey() && vm.journey().distance()) {
-			return (Math.round(((vm.journey().distance() / vm.journey().duration()) * 2236.94) * 100) / 100) + ' mph';
+			vm.paceMph = (vm.journey().distance() / vm.journey().duration()) * 2236.94;
+			vm.formattedPace = (Math.round(vm.paceMph * 100) / 100);
+			return vm.formattedPace + ' mph';
 		}
 	});
 
@@ -1043,6 +1073,16 @@ var viewModel = function() {
 	
 	autocompleteStart.bindTo('bounds', map);
 	autocompleteFinish.bindTo('bounds', map);
+
+	/* Handle bicycle layer manually as the Google directionsRender was inconsistent */
+	var bikeLayer = new google.maps.BicyclingLayer();
+	vm.showBikeLayer = ko.computed(function() {
+		if (vm.travelMode() == 'BICYCLING') {
+			bikeLayer.setMap(map);
+		} else {
+			bikeLayer.setMap(null);
+		}
+	});
 	
 	/* Deal with iPhone display bug that arrises otherwise */
 	autocompleteFinish.addListener('place_changed', function() {
@@ -1128,7 +1168,7 @@ var initMap = function() {
 
 	/* Direction services */
 	directionsService = new google.maps.DirectionsService();
-	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true});
+	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true, suppressBicyclingLayer: true});
 
 	/* Initiate the View-model */
 	ko.applyBindings(new viewModel());
