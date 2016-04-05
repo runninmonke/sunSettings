@@ -913,12 +913,21 @@ var viewModel = function() {
 		vm.hidePaceSettings;
 	};
 
+	vm.resetPace = function() {
+		vm.paceMultiplier(1000);
+		vm.hidePaceSettings();
+	};
+
 	vm.cancelTime = function() {
 		vm.showAlert(false);
 	};
 
 	vm.getReturnTrip = function() {
-		alert('TODO: Get rturn trip');
+		var newFinishLatLng = new google.maps.LatLng({lat: vm.startPlace().latLng().lat(), lng: vm.startPlace().latLng().lng()});
+		vm.startPlace().setLatLng(vm.finishPlace().latLng());
+		vm.departureTime(new Date(vm.finishPlace().time.getTime()));
+		vm.startPlace().createTime(vm.departureTime().getTime());
+		vm.finishPlace().setLatLng(newFinishLatLng);
 	};
 
 	vm.timer = function() {
@@ -1149,7 +1158,8 @@ var initMap = function() {
 	map = new google.maps.Map(document.getElementById('map'), {
 		zoom: 11,
 		mapTypeControlOptions: {
-			position: google.maps.ControlPosition.TOP_RIGHT
+			position: google.maps.ControlPosition.TOP_RIGHT,
+			mapTypeIds: [google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.SATELLITE, google.maps.MapTypeId.HYBRID, google.maps.MapTypeId.TERRAIN]
 		}
 	});
 
