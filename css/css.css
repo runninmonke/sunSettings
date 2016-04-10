@@ -42,7 +42,7 @@ button {
 .field {
   width: 100%;
   padding: 0;
-  cursor: pointer;
+  cursor: text;
   pointer-events: all;
   height: 25px;
   font-size: 1em;
@@ -69,7 +69,6 @@ h3 {
   z-index: 1;
   pointer-events: none;
   margin-left: -235px;
-  overflow: hidden;
   color: white; }
   #nav-bar section {
     margin: 7px 10px 7px 7px; }
@@ -112,13 +111,19 @@ h3 {
     font-size: 1.1em;
     margin: 0 5px; }
 
-.search button.set-time {
-  float: left; }
+.search {
+  height: 175px; }
+  .search button.set-time {
+    float: left; }
 
 /*** Info ***/
 .stats {
   text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444;
-  padding-top: 25px; }
+  padding: 25px 5px 0 0;
+  width: 233px;
+  height: calc(100% - 214px);
+  overflow: auto;
+  pointer-events: all; }
   .stats button {
     margin-right: 0; }
 
@@ -141,8 +146,7 @@ h3 {
 
 .selected,
 .deselected {
-  cursor: pointer;
-  pointer-events: all; }
+  cursor: pointer; }
 
 .selected {
   color: black;
@@ -157,15 +161,26 @@ h3 {
   float: right;
   margin-right: -1px;
   text-align: right;
-  cursor: text;
-  pointer-events: all; }
+  cursor: text; }
+
+.directions {
+  margin-top: 50px;
+  padding: 0;
+  /* Hide unwanted directions content from the directionsRender */ }
+  .directions div,
+  .directions tr {
+    font-size: 0.98em;
+    color: white; }
+  .directions > div > div > :nth-child(2),
+  .directions > div > div > :nth-child(3) > :nth-child(3) {
+    display: none; }
 
 /*** Weather ***/
 .weather {
   margin-top: 27px;
   height: 105px;
   /* Iterate text shadow to eliminate blur gradient and give thick outline effect */
-  text-shadow: -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8; }
+  text-shadow: -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8; }
 
 .cur-condition {
   margin: -10px 0 0 5px;

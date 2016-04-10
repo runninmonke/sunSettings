@@ -6,7 +6,11 @@ var MAX_ATTEMPTS = 5;
 /* Maximum error in ms allowed for estimate to be considered accurate */
 var ESTIMATE_RANGE = 30000;
 
-var timeFormatLocale = 'en-US';
+/* Units of time in milliseconds */
+var SECOND = 1000;
+var MINUTE = 60000; 
+var HOUR = 3600000;
+var DAY = 86400000;
 
 /* Template used format data into infoWindow DOM elements */
 var contentTemplate = {
@@ -44,6 +48,7 @@ var Place = function(data) {
 	self.latLng = ko.observable();
 	self.active = ko.observable(true);
 	self.hasSunDisplayTime = ko.observable(false);
+	self.weather = ko.observable();
 
 	/* Assigns to observable if it exists, otherwise regular assignment */
 	for (var item in data) {
@@ -146,7 +151,7 @@ Place.prototype.useLatLngForInfo = function () {
 	self.latLngDisplay = self.latLng().lat().toString().slice(0,9);
 	self.latLngDisplay += ', ' + self.latLng().lng().toString().slice(0,9);
 
-	self.getWeather();
+	self.getWeatherData();
 
 	/* Run methods dependent on time, but don't change time */
 	self.createTime();
@@ -158,17 +163,43 @@ Place.prototype.useLatLngForInfo = function () {
 	}
 };
 
-/* TODO: Implement display of weather at start and finsih of trip */
 /* Get locale weather data */
-Place.prototype.getWeather = function() {
-//	var self = this;
+Place.prototype.getWeatherData = function() {
+	var self = this;
+
+	if (this.constructor == SunPlace) {
+		return;
+	}
+
 	/* Use an API to get weather info*/
-/*	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + self.latLng().lat() + ',' + self.latLng().lng(), function(results) {
-		self.weather = results;
+	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + self.latLng().lat() + ',' + self.latLng().lng() + '&days=10', function(results) {
+		self.weatherData = results;
+
+		/* Determine amount API times are offset from UTC. Assumes time offset will be some increment of 30 minutes */
+		var timesDif = Date.now() - self.weatherData.location.localtime_epoch * 1000;
+		self.weatherData.timeAdjust = Math.round(timesDif / 1800000) / 2 * 3600000;
+		self.getWeather();
 	}).fail(function() {
 		alert('Weather data not available');
 	});
-*/
+
+};
+
+Place.prototype.getWeather = function() {
+	var placeTimeVsWeatherTime = this.time.getTime() - (this.weatherData.current.last_updated_epoch * 1000 + this.weatherData.timeAdjust);
+	var placeTimeVsForecastStart = this.time.getTime() - (this.weatherData.forecast.forecastday[0].hour[0].time_epoch * 1000 + this.weatherData.timeAdjust);
+
+	if (placeTimeVsWeatherTime < -HOUR) {
+		this.weather(undefined);
+	} else if (placeTimeVsWeatherTime < HOUR){
+		this.weather(this.weatherData.current);
+	} else if (placeTimeVsForecastStart < (10 * DAY)) {
+		var forecastDay = Math.floor(placeTimeVsForecastStart/DAY);
+		var forecastHour = Math.floor(placeTimeVsForecastStart/HOUR) % 24;
+		this.weather(this.weatherData.forecast.forecastday[forecastDay].hour[forecastHour]);
+	} else {
+		this.weather(undefined);
+	}
 };
 
 /* Calculate local sun times */
@@ -191,6 +222,11 @@ Place.prototype.getTimeZone = function() {
 		}
 		self.buildContent();
 	});
+
+	/* Also getWeather update if weatherData is available */
+	if (this.hasOwnProperty('weatherData')) {
+		this.getWeather();
+	}
 };
 
 Place.prototype.createTime = function(newTime) {
@@ -699,9 +735,9 @@ function getDurationString(time) {
 		negSign = '-';
 	}
 
-	var hours = Math.floor(time/3600000);
-	var minutes = Math.floor(time/60000) % 60;
-	var seconds = Math.floor(time/1000) % 60;
+	var hours = Math.floor(time/HOUR);
+	var minutes = Math.floor(time/MINUTE) % 60;
+	var seconds = Math.floor(time/SECOND) % 60;
 
 	minutes = minutes.toString();
 	seconds = seconds.toString();
@@ -1009,6 +1045,13 @@ var viewModel = function() {
 		}
 	});
 
+	vm.showWeather = ko.pureComputed(function(){
+		if (vm.selectedTab().weather()) {
+			vm.displayWeather(vm.selectedTab().weather());
+			return true;
+		}
+	});
+
 	vm.tabClick = function(obj, evt) {
 		var tab = evt.target.textContent;
 		if ((tab == 'Finish' && !vm.finishPlace().latLng()) || (tab == 'Travels' && !vm.journey())) {
@@ -1063,17 +1106,13 @@ var viewModel = function() {
 	vm.conditionImg = ko.observable('');
 	vm.currentCondition = ko.observable('');
 	vm.currentTemp = ko.observable('');
-	vm.maxTemp = ko.observable('');
-	vm.minTemp = ko.observable('');
 
 	/* TODO: Implement weather */
 	/* Display neighborhood weather in nav bar */
 	vm.displayWeather = function(weather) {
-		vm.conditionImg('http://' + weather.current.condition.icon);
-		vm.currentCondition(weather.current.condition.text);
-		vm.currentTemp(weather.current.temp_f + '°F');
-		vm.maxTemp(weather.forecast.forecastday[0].day.maxtemp_f + '°F');
-		vm.minTemp(weather.forecast.forecastday[0].day.mintemp_f + '°F');
+		vm.conditionImg('http://' + weather.condition.icon);
+		vm.currentCondition(weather.condition.text);
+		vm.currentTemp(weather.temp_f + '°F');
 	};
 
 	var autocompleteStart = new google.maps.places.Autocomplete($('.departure .field')[0]);
@@ -1178,7 +1217,7 @@ var initMap = function() {
 
 	/* Direction services */
 	directionsService = new google.maps.DirectionsService();
-	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true, suppressBicyclingLayer: true});
+	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true, suppressBicyclingLayer: true, panel: $('.directions')[0]});
 
 	/* Initiate the View-model */
 	ko.applyBindings(new viewModel());

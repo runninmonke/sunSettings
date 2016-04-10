@@ -57,6 +57,16 @@
                         <div class="label">Day length:</div>
                         <div class="data" data-bind="text: dayLength"></div>
                     </div>
+                    <div class="weather" data-bind="visible: showWeather">
+                        <div class="cur-condition">
+                            <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
+                            <p class="cur-cond-text" data-bind="text: currentCondition">
+                                <p>
+                        </div>
+                        <div class="temps">
+                            <p class="temp" data-bind="text: currentTemp"></p>
+                        </div>
+                    </div>
                 </div>
                 <div class="journey hidden">
                     <div class="row">
@@ -79,18 +89,7 @@
                     <button type="button" class="show-set-pace" data-bind="click: showPaceSettings">Change pace</button>
                     <button type="button" class="set-pace hidden" data-bind="click: changePace">Submit</button>
                     <button type="button" class="set-pace hidden" data-bind="click: resetPace">Reset</button>
-                </div>
-            </section>
-            <section class="weather hidden">
-                <div class="cur-condition">
-                    <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
-                    <p class="cur-cond-text" data-bind="text: currentCondition">
-                        <p>
-                </div>
-                <div class="temps">
-                    <p class="temp" data-bind="text: currentTemp"></p>
-                    <p class="high-temp" data-bind="text: maxTemp"></p>
-                    <p class='low-temp' data-bind="text: minTemp"></p>
+                    <div class="directions row"></div>
                 </div>
             </section>
         </div>
