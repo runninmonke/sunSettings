@@ -17,6 +17,22 @@ body {
   overflow: hidden;
 }
 
+::-webkit-scrollbar
+{
+  width: 6px;  /* for vertical scrollbars */
+  height: 6px; /* for horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track
+{
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb
+{
+  background: rgba(0, 0, 0, 0.5);
+}
+
 .row {
   width: 100%;
   overflow: hidden;
@@ -40,7 +56,8 @@ body {
   width: calc(100% + 4px)
 }
 
-button {
+button,
+.button {
   border: none;
   border-radius: 2px;
   font-size: 0.8em;
@@ -126,9 +143,17 @@ h3 {
 
 /*** Search ***/
 
-.travel-mode {
-  margin: 0 0 -10px 0;
+.travel-mode {  
+  .character {
+    -webkit-transform: rotate(-50deg);
+    transform: rotate(-50deg);
+    font-size: 0.8em;
+    margin: 2px 0;
+    pointer-events: none;
+  }
+
   button {
+    height: 30px;
     padding: 2px 10px;
     font-size: 1.1em;
     margin: 0 5px;
@@ -201,8 +226,11 @@ h3 {
   cursor: text;
 }
 
+.directions-container {
+  margin-top: 45px;
+}
+
 .directions {
-  margin-top: 50px;
   padding: 0;
 
   div,
@@ -212,8 +240,9 @@ h3 {
   }
 
   /* Hide unwanted directions content from the directionsRender */
-  > div > div > :nth-child(2),
-  > div > div > :nth-child(3) > :nth-child(3) {
+  .adp-placemark,
+  .adp-warnbox,
+  .adp-summary {
     display: none;
   }
 }

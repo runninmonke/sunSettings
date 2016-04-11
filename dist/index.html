@@ -14,15 +14,16 @@
         <div id="nav-bar" data-bind="attr: {class: menuStatus}">
             <section class="search">
                 <div class="travel-mode row" data-bind="click: travelModeClick">
-                    <button type="text" value="WALKING" class="button">🚶</button>
-                    <button type="text" value="BICYCLING" class="button">🚲</button>
-                    <button type="text" value="DRIVING" class="button selected">🚗</button>
+                    <button type"button" id="locate" data-bind="click: $root.toggleLocator"><p class='character'>➤</p></button>
+                    <button type="button" value="WALKING">🚶</button>
+                    <button type="button" value="BICYCLING">🚲</button>
+                    <button type="button" value="DRIVING" class="selected">🚗</button>
                 </div>                    
                 <div class="departure row" data-bind="with: startPlace">
                     <div class="label">Start</div>
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row buttons">
-                        <button type="button" class="set-time" data-bind="click: $root.showTimeSettings">Set departure time</button>
+                        <button type="button" class="set-time" data-bind="click: $root.showTimeSettings">Departure time</button>
                         <button type="button" class="submit" data-bind="click: displayWrite">Submit</button>
                         <button type="button" class="reset hidden" data-bind="click: $root.reset">Reset</button>
                     </div>
@@ -31,7 +32,7 @@
                     <div class="label">Finish</div>
                     <input type="text" class="field" data-bind="value: displayRead, event: {keypress: keyHandler}">
                     <div class="row buttons">
-                        <button type="button" class="set-time hidden" data-bind="click: $root.showTimeSettings">Set arrival time</button>
+                        <button type="button" class="set-time hidden" data-bind="click: $root.showTimeSettings">Arrival time</button>
                         <button type="button" class="submit" data-bind="click: displayWrite">Submit</button>
                         <button type="button" class="return-trip hidden" data-bind="click: $root.getReturnTrip">Return trip</button>
                     </div>
@@ -89,7 +90,10 @@
                     <button type="button" class="show-set-pace" data-bind="click: showPaceSettings">Change pace</button>
                     <button type="button" class="set-pace hidden" data-bind="click: changePace">Submit</button>
                     <button type="button" class="set-pace hidden" data-bind="click: resetPace">Reset</button>
-                    <div class="directions row"></div>
+                    <div class="directions-container">
+                        <div class="label row">Directions:</div>
+                        <div class="directions row"></div>
+                    </div>
                 </div>
             </section>
         </div>
@@ -102,7 +106,7 @@
                     <div class="message label">Allow geolocation or enter starting location:</div>
                     <div class="form-container">
                         <input type="text" class="field" placeholder="">
-                        <button type="button" class="button" data-bind="click: inputStart">Submit</button>
+                        <button type="button" data-bind="click: inputStart">Submit</button>
                     </div>
                 </div>
                 <div class="time-container content hidden">
@@ -125,7 +129,7 @@
                     </form>
                     <button type="button" class="current time-button" data-bind="click: removeDepartureTime">Use current time</button>
                     <button type="button" class="cancel time-button" data-bind="click: cancelTime">Cancel</button>
-                    <button type="button" class="submit button">Submit</button>
+                    <button type="button" class="submit">Submit</button>
                 </div>
             </div>
         </div>
