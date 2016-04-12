@@ -25,6 +25,7 @@
                     <div class="row buttons">
                         <button type="button" class="set-time" data-bind="click: $root.showTimeSettings">Departure time</button>
                         <button type="button" class="submit" data-bind="click: displayWrite">Submit</button>
+                        <button type="button" class="geo-submit hidden" data-bind="click: $root.submitGeolocation">Update</button>
                         <button type="button" class="reset hidden" data-bind="click: $root.reset">Reset</button>
                     </div>
                 </div>
@@ -61,8 +62,8 @@
                     <div class="weather" data-bind="visible: showWeather">
                         <div class="cur-condition">
                             <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
-                            <p class="cur-cond-text" data-bind="text: currentCondition">
-                                <p>
+                            <p class="cur-cond-text" data-bind="text: currentCondition"></p>
+                            <p></p>
                         </div>
                         <div class="temps">
                             <p class="temp" data-bind="text: currentTemp"></p>

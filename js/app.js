@@ -16,6 +16,7 @@ var DAY = 86400000;
 var contentTemplate = {
 	time: '<p>at %time%</p><p class="time-zone">%timezone%</p>',
 	name: '<h3>%text%</h3>',
+	weather: '<img class="cond-img" src="http://%url%">',
 	start: '<div class="info-window">',
 	end: '</div>'
 };
@@ -49,6 +50,10 @@ var Place = function(data) {
 	self.active = ko.observable(true);
 	self.hasSunDisplayTime = ko.observable(false);
 	self.weather = ko.observable();
+	self.timeZone = undefined;
+	self.status = 'deselected';
+	self.content = '';
+	self.icon = icons.standard;
 
 	/* Assigns to observable if it exists, otherwise regular assignment */
 	for (var item in data) {
@@ -60,10 +65,6 @@ var Place = function(data) {
 	self.displayName = self.name[0].toUpperCase() + self.name.slice(1);
 	self.time = new Date();
 	self.displayTime = new Date();
-	self.timeZone = undefined;
-	self.status = 'deselected';
-	self.content = '';
-
 
 	/* Deep copy template so object's infoWindow template content can be modified */
 	self.template = {};
@@ -73,7 +74,6 @@ var Place = function(data) {
 		}
 	}
 
-	self.icon = icons.standard;
 	self.draggable = false;
 	self.infoWindow = new google.maps.InfoWindow({pixelOffset: self.icon.pixelOffset});
 
@@ -138,6 +138,7 @@ Place.prototype.getGeocodeInfo = function() {
 				self.useLatLngForInfo();
 			}
 		} else if (status == 'OVER_QUERY_LIMIT') {
+			console.log('GC QL hit', self.name);
 			setTimeout(function(){self.getGeocodeInfo();}, 1000);
 		} else {
 			alert('Location data unavailable. Geocoder failed:' + status);
@@ -200,6 +201,8 @@ Place.prototype.getWeather = function() {
 	} else {
 		this.weather(undefined);
 	}
+
+	this.buildContent();
 };
 
 /* Calculate local sun times */
@@ -301,6 +304,10 @@ Place.prototype.buildContent = function() {
 
 	this.content = this.template.start;
 	this.content += this.template.name.replace('%text%', this.displayName);
+
+	if (this.weather() && this.constructor != Waypoint) {
+		this.content += this.template.weather.replace('%url%', this.weather().condition.icon);
+	}
 
 	this.content += this.template.time.replace('%time%', this.displayTime.string).replace('%timezone%', this.timeZoneName);
 	this.content += this.template.end;
@@ -448,6 +455,7 @@ SunPlace.prototype.finalize = function() {
 	this.setLatLng(this.latLng());
 	this.toggleSelected();
 	this.finalized = true;
+	this.getWeatherData();
 
 	vm.journey().finalize();
 };
@@ -793,15 +801,22 @@ var viewModel = function() {
 			vm.startPlace().setLatLng(latLng);
 			$('.start-container').toggleClass('hidden', true);
 			vm.showAlert(false);
-			$('.arrival input').focus();
 		}
 	};
 
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(vm.getStartLocation);
+		$('.arrival input').focus();
 	} else {
 		alert('Browser not supported');
 	}
+
+	vm.submitGeolocation = function() {
+		var newPosition = {coords:{}};
+		newPosition.coords.latitude = geoMarker.getPosition().lat();
+		newPosition.coords.longitude = geoMarker.getPosition().lng();
+		vm.getStartLocation(newPosition);
+	};
 
 	vm.menuStatus = ko.observable('closed');
 
@@ -834,10 +849,15 @@ var viewModel = function() {
 		$('#locate').toggleClass('selected');
 
 		if ($('#locate')[0].className == 'selected') {
+			$('.departure .submit').toggleClass('hidden', true);
+			$('.geo-submit').toggleClass('hidden', false);
+
 			geoMarker.setMap(map);
 			map.setZoom(15);
 		} else {
 			geoMarker.setMap(null);
+			$('.departure .submit').toggleClass('hidden', false);
+			$('.geo-submit').toggleClass('hidden', true);
 		}
 	};
 
@@ -1020,6 +1040,11 @@ var viewModel = function() {
 			$('.return-trip').toggleClass('hidden', false);
 			$('.arrival .set-time').toggleClass('hidden', false);
 			vm.hidePaceSettings();
+
+			/* Make sure startPlace is deselected to hide infoWindow */
+			vm.startPlace().status = 'selected';
+			vm.startPlace().toggleSelected();
+			console.log('getJourney');
 		}
 	});
 
