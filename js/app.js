@@ -109,6 +109,12 @@ Place.prototype.reset = function() {
 	this.address(undefined);
 	this.content = '';
 	this.status = 'deselected';
+	this.active(true);
+	this.hasSunDisplayTime(false);
+	this.weather(undefined);
+	this.timeZone = undefined;
+	this.status = 'deselected';
+	this.content = '';
 
 	if (this.marker) {
 		this.marker.setMap(null);
@@ -121,7 +127,7 @@ Place.prototype.getGeocodeInfo = function() {
 	var self = this;
 	var data;
 
-	if (self.latLng()) {
+	if (self.latLng() && self.constructor != SunPlace) {
 		data = {latLng: self.latLng()};
 	} else if (self.address()) {
 		data = {address: self.address()};
@@ -174,6 +180,12 @@ Place.prototype.getWeatherData = function() {
 
 	/* Use an API to get weather info*/
 	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + self.latLng().lat() + ',' + self.latLng().lng() + '&days=10', function(results) {
+
+		if (!results) {
+			alert('Weather data not available');
+			return;
+		}
+
 		self.weatherData = results;
 
 		/* Determine amount API times are offset from UTC. Assumes time offset will be some increment of 30 minutes */
@@ -733,6 +745,8 @@ Journey.prototype.finalize = function() {
 	}
 
 	this.sunlightChange(journeyPlaceAnalysis.sunlight - departurePlaceAnalysis.sunlight);
+
+	this.finalized = true;
 };
 
 function getDurationString(time) {
@@ -1023,9 +1037,10 @@ var viewModel = function() {
 
 	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
 	vm.getJourney = ko.computed(function() {
-		if (vm.startPlace().latLng() && vm.finishPlace().latLng() && vm.paceMultiplier()) {
+		if (vm.startPlace().latLng() && vm.finishPlace().latLng() && vm.paceMultiplier() && (!vm.journey() || vm.journey().finalized)) {
 			if (vm.journey()) {
 				vm.journey().resetSunEvents();
+				vm.journey().finalized = false;
 			}
 
 			if (!vm.departureTime()) {
@@ -1282,7 +1297,7 @@ var initMap = function() {
 	/* Initiate google maps objects that will be used */
 	geocoder = new google.maps.Geocoder();
 	geoMarker = new GeolocationMarker();
-	geoMarker.setMarkerOptions({icon: icons.standard.img});
+	geoMarker.setMarkerOptions({visible: false});
 	geoMarker.addListener('position_changed', function() {
 		map.setCenter(geoMarker.getPosition());
 	});
