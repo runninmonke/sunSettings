@@ -60,13 +60,13 @@
                         <div class="data" data-bind="text: dayLength"></div>
                     </div>
                     <div class="weather" data-bind="visible: showWeather">
+                        <div class="label">Weather:</div>
                         <div class="cur-condition">
-                            <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
-                            <p class="cur-cond-text" data-bind="text: currentCondition"></p>
-                            <p></p>
-                        </div>
-                        <div class="temps">
-                            <p class="temp" data-bind="text: currentTemp"></p>
+                            <p class="cond-text" data-bind="text: currentCondition"></p>
+                            <div class="cond-figure">
+                                <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
+                                <p class="temp" data-bind="text: currentTemp"></p>
+                            </div>
                         </div>
                     </div>
                 </div>

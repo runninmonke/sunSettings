@@ -1115,7 +1115,7 @@ var viewModel = function() {
 
 	vm.tabClick = function(obj, evt) {
 		var tab = evt.target.textContent;
-		if ((tab == 'Finish' && !vm.finishPlace().latLng()) || (tab == 'Travels' && !vm.journey())) {
+		if ((tab == 'Finish' && !vm.finishPlace().latLng()) || (tab == 'Travels' && !vm.journey()) || evt.target.className == 'tabs row') {
 			return;
 		}
 
