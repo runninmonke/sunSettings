@@ -850,10 +850,14 @@ var viewModel = function() {
 	vm.toggleMenu();
 
 	vm.travelModeClick = function(obj, evt) {
-		if (evt.target.id != "locate") {
+		if (evt.target.id != 'locate') {
 			vm.travelMode(evt.target.value);
-			$('.travel-mode button').attr('class', '');
+
+			var locateStatus = $('#locate')[0].className;
+
+			$('.travel-mode > button').attr('class', '');
 			evt.target.className = 'selected';
+			$('#locate')[0].className = locateStatus;
 		}
 	};
 
@@ -1059,7 +1063,6 @@ var viewModel = function() {
 			/* Make sure startPlace is deselected to hide infoWindow */
 			vm.startPlace().status = 'selected';
 			vm.startPlace().toggleSelected();
-			console.log('getJourney');
 		}
 	});
 
@@ -1216,6 +1219,16 @@ var viewModel = function() {
 		}, 50);
 	});
 
+	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation
+	$(function() {
+		window.addEventListener('scroll', function(){
+			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
+			if (mq.matches && !vm.showAlert()) {
+				window.scrollTo(0, 0);
+			}
+		});
+	});
+
 	/* Hide menus on small screens when in landscape orientation */
 	vm.orientationDisplayAdjust = function() {
 		var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
@@ -1232,16 +1245,6 @@ var viewModel = function() {
 
 	/* Ensure media queries above are applied on first load */
 	window.addEventListener('load', vm.orientationDisplayAdjust);
-
-	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation*/
-	$(function() {
-		window.addEventListener('scroll', function(){
-			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
-			if (mq.matches && !vm.showAlert()) {
-				window.scrollTo(0, 0);
-			}
-		});
-	});
 };
 
 /* Declare global objects */
