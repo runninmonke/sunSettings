@@ -21,6 +21,7 @@ var contentTemplate = {
 	end: '</div>'
 };
 
+/* Map marker icons images */
 var icons = {
 	standard: {img: 'imgs/default.png', pixelOffset:{width: 0, height: 0}},
 	day: {img: 'imgs/day.png', pixelOffset:{width: 0, height: 16}},
@@ -97,6 +98,7 @@ Place.prototype.setLatLng = function(latLng) {
 	this.useLatLngForInfo();
 };
 
+/* Reset address dependent attributes with new address */
 Place.prototype.setAddress = function(address) {
 	this.reset();
 
@@ -144,14 +146,14 @@ Place.prototype.getGeocodeInfo = function() {
 				self.useLatLngForInfo();
 			}
 		} else if (status == 'OVER_QUERY_LIMIT') {
-			console.log('GC QL hit', self.name);
 			setTimeout(function(){self.getGeocodeInfo();}, 1000);
 		} else {
-			alert('Location data unavailable. Geocoder failed:' + status);
+			alert('Location data unavailable:' + status);
 		}
 	});
 };
 
+/* Update dependencies of Latlng */
 Place.prototype.useLatLngForInfo = function () {
 	var self = this;
 
@@ -198,6 +200,7 @@ Place.prototype.getWeatherData = function() {
 
 };
 
+/* Find weather data for current time of place */
 Place.prototype.getWeather = function() {
 	var placeTimeVsWeatherTime = this.time.getTime() - (this.weatherData.current.last_updated_epoch * 1000 + this.weatherData.timeAdjust);
 	var placeTimeVsForecastStart = this.time.getTime() - (this.weatherData.forecast.forecastday[0].hour[0].time_epoch * 1000 + this.weatherData.timeAdjust);
@@ -244,6 +247,7 @@ Place.prototype.getTimeZone = function() {
 	}
 };
 
+/* Use to set time of place object. Makes sure dependies of time also change. */
 Place.prototype.createTime = function(newTime) {
 	newTime = newTime || this.time.getTime();
 	
@@ -263,7 +267,7 @@ Place.prototype.createTime = function(newTime) {
 	}
 };
 
-/* Return a date object where the UTC time is actually the local timezone time. Objject includes additional useful properties like 'string' which is a formatted string of the time */
+/* Return a date object where the UTC time is actually the local timezone time. Also includes a formatted string of the time as property */
 function getDisplayTime(time, timeZoneOffset) {
 	var displayTime = new Date(time.getTime() + timeZoneOffset);
 	displayTime.meridie = 'AM';
@@ -472,6 +476,7 @@ SunPlace.prototype.finalize = function() {
 	vm.journey().finalize();
 };
 
+/* Adjusts location/time of self to match estimated travel time with sun event time */
 SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	var self = this;
 	self.refineAttemps++;
@@ -538,10 +543,8 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 			}
 		} else if (status == 'OVER_QUERY_LIMIT') {
 			setTimeout(function() {GetRoute(pathSection.path[0], self.latLng(), directionsCallback);}, 1000);
-
-			console.log('QL hit');
 		} else {
-			console.log(status, result);
+			alert('Directions unavailable: ' + status);
 		}
 	};
 
@@ -552,7 +555,7 @@ SunPlace.prototype.refineEstimate = function(pathSection, startTime) {
 	}
 };
 
-
+/* Finds the next sun event that will occur */
 function findNextSunEvent (lastSunTime, sunTimes, latLng) {
 	var nextSunEvent = {
 		time: new Date(lastSunTime),
@@ -629,6 +632,7 @@ Journey.prototype.resetSunEvents = function() {
 	}
 };
 
+/* Finds location/time of sun events during journey */
 Journey.prototype.analyzeRoute = function() {
 	var self = this;
 	var locationTime = this.startPlace().time.getTime();
@@ -695,6 +699,8 @@ Journey.prototype.analyzeRoute = function() {
 	}
 };
 
+
+/* Main purpose is to calculate the diffence in daylight that is experienced on the journey vs staying at the departure location */
 Journey.prototype.finalize = function() {
 	/* Stop if all sunEvents are not finalized */
 	for (var i = 0; i < this.sunEvents.length; i++) {
@@ -702,7 +708,6 @@ Journey.prototype.finalize = function() {
 			return;
 		}
 	}
-
 
 	/* Initialize objects for summing sunlight during journey for comparison */
 	var journeyPlaceAnalysis = {sunlight: 0, 
@@ -746,6 +751,7 @@ Journey.prototype.finalize = function() {
 
 	this.sunlightChange(journeyPlaceAnalysis.sunlight - departurePlaceAnalysis.sunlight);
 
+	/* Now allow for journey to be changed */
 	this.finalized = true;
 };
 
@@ -808,6 +814,7 @@ var viewModel = function() {
 		$('.arrival input').focus();
 	};
 
+	/* Callback for geolocation of intial start position */
 	vm.getStartLocation = function(position) {
 		if (position) {
 			var latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
@@ -815,6 +822,7 @@ var viewModel = function() {
 			vm.startPlace().setLatLng(latLng);
 			$('.start-container').toggleClass('hidden', true);
 			vm.showAlert(false);
+			$('.arrival input').focus();
 		}
 	};
 
@@ -825,14 +833,13 @@ var viewModel = function() {
 		alert('Browser not supported');
 	}
 
+	/* Submit position of geoMarker for starting location */
 	vm.submitGeolocation = function() {
 		var newPosition = {coords:{}};
 		newPosition.coords.latitude = geoMarker.getPosition().lat();
 		newPosition.coords.longitude = geoMarker.getPosition().lng();
 		vm.getStartLocation(newPosition);
 	};
-
-	vm.menuStatus = ko.observable('closed');
 
 	/* Toggle menu nav-bar open and closed */
 	vm.toggleMenu = function(evt, obj, actionCase) {
@@ -847,6 +854,8 @@ var viewModel = function() {
 		}
 	};
 
+
+	vm.menuStatus = ko.observable('closed');
 	vm.toggleMenu();
 
 	vm.travelModeClick = function(obj, evt) {
@@ -862,8 +871,7 @@ var viewModel = function() {
 	};
 
 
-
-	vm.toggleLocator = function() {
+	vm.toggleGeoMarker = function() {
 		$('#locate').toggleClass('selected');
 
 		if ($('#locate')[0].className == 'selected') {
@@ -895,6 +903,7 @@ var viewModel = function() {
 		vm.hidePaceSettings();
 	};
 
+	/* Bring up alert window to change time */
 	vm.showTimeSettings = function() {
 		$('.message').text(this.displayName);
 		$('.alert-window').css('width', '210px');
@@ -929,6 +938,7 @@ var viewModel = function() {
 		$('.date').focus();
 	};
 
+	/* Read input into new Date object */
 	vm.getNewTime = function() {
 		var newHours = $('.hours').val();
 		if ($('.meridies').val() == 'PM' && newHours < 12) {
@@ -956,6 +966,7 @@ var viewModel = function() {
 		$('.departure .set-time').focus();
 	};
 
+	/* Use current time for next departure time */
 	vm.removeDepartureTime = function() {
 		vm.departureTime(undefined);
 		vm.timer();
@@ -979,6 +990,7 @@ var viewModel = function() {
 		vm.changePace({}, {}, newPace);
 	};
 
+	/* UI for changing travel speed */
 	vm.showPaceSettings = function() {
 		$('.pace .data').attr('style', 'display: none');
 		$('.pace input').toggleClass('hidden', false).focus();
@@ -995,21 +1007,23 @@ var viewModel = function() {
 		$('.set-pace').toggleClass('hidden', true);
 	};
 
+	vm.resetPace = function() {
+		vm.paceMultiplier(1000);
+		vm.hidePaceSettings();
+	};
+
+	/* Change travel speed */
 	vm.changePace = function(obj, evt, newPace) {
 		newPace = newPace || vm.paceMph / $('.pace input')[0].value * vm.paceMultiplier();
 		vm.paceMultiplier(newPace);
 		vm.hidePaceSettings;
 	};
 
-	vm.resetPace = function() {
-		vm.paceMultiplier(1000);
-		vm.hidePaceSettings();
-	};
-
 	vm.cancelTime = function() {
 		vm.showAlert(false);
 	};
 
+	/* Use current arrival time for departure time and reverse the route */
 	vm.getReturnTrip = function() {
 		var newFinishLatLng = new google.maps.LatLng({lat: vm.startPlace().latLng().lat(), lng: vm.startPlace().latLng().lng()});
 		vm.startPlace().setLatLng(vm.finishPlace().latLng());
@@ -1018,6 +1032,7 @@ var viewModel = function() {
 		vm.finishPlace().setLatLng(newFinishLatLng);
 	};
 
+	/* Updates startPlace time when running so current time */
 	vm.timer = function() {
 		if (!vm.departureTime() && !vm.journey()) {
 			vm.startPlace().createTime(Date.now());
@@ -1041,6 +1056,7 @@ var viewModel = function() {
 
 	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
 	vm.getJourney = ko.computed(function() {
+		/* Some parts of conditional are only present to make KO trigger function when the variables involved change */
 		if (vm.startPlace().latLng() && vm.finishPlace().latLng() && vm.paceMultiplier() && (!vm.journey() || vm.journey().finalized)) {
 			if (vm.journey()) {
 				vm.journey().resetSunEvents();
@@ -1076,6 +1092,7 @@ var viewModel = function() {
 		}
 	});
 
+	/* Use double click event to create destination if not present */
 	map.addListener('dblclick', function(evt) {
 		if (!vm.finishPlace().latLng()) {
 			vm.finishPlace().setLatLng(evt.latLng);
@@ -1084,37 +1101,6 @@ var viewModel = function() {
 	});
 
 	vm.selectedTab = ko.observable(vm.startPlace());
-
-	vm.showPlace = ko.pureComputed(function() {
-		if (vm.selectedTab().hasSunDisplayTime()) {
-			return true;
-		}
-	});
-	
-	vm.selectedSunrise = ko.pureComputed(function() {
-		if (vm.selectedTab().hasSunDisplayTime()) {
-			return getDisplayTime(vm.selectedTab().sun.sunrise, vm.selectedTab().timeZoneOffset).string;
-		}
-	});
-
-	vm.selectedSunset = ko.pureComputed(function() {
-		if (vm.selectedTab().hasSunDisplayTime()) {
-			return getDisplayTime(vm.selectedTab().sun.sunset, vm.selectedTab().timeZoneOffset).string;
-		}
-	});
-
-	vm.dayLength = ko.computed(function() {
-		if (vm.selectedTab().hasSunDisplayTime()) {
-			return getDurationString(vm.selectedTab().sun.sunset.getTime() - vm.selectedTab().sun.sunrise.getTime());
-		}
-	});
-
-	vm.showWeather = ko.pureComputed(function(){
-		if (vm.selectedTab().weather()) {
-			vm.displayWeather(vm.selectedTab().weather());
-			return true;
-		}
-	});
 
 	vm.tabClick = function(obj, evt) {
 		var tab = evt.target.textContent;
@@ -1139,25 +1125,57 @@ var viewModel = function() {
 		$('.journey').toggleClass('hidden', true);		
 	};
 
-	vm.daylightChangeDisplay = ko.pureComputed(function() {
-		if (vm.journey() && $.isNumeric(vm.journey().sunlightChange())) {
-			$('.tabs :last').click();
-			return getDurationString(vm.journey().sunlightChange());
+	vm.showPlace = ko.pureComputed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return true;
+		}
+	});
+	
+	vm.selectedSunrise = ko.pureComputed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return getDisplayTime(vm.selectedTab().sun.sunrise, vm.selectedTab().timeZoneOffset).string;
 		}
 	});
 
+	vm.selectedSunset = ko.pureComputed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return getDisplayTime(vm.selectedTab().sun.sunset, vm.selectedTab().timeZoneOffset).string;
+		}
+	});
+
+	vm.dayLength = ko.pureComputed(function() {
+		if (vm.selectedTab().hasSunDisplayTime()) {
+			return getDurationString(vm.selectedTab().sun.sunset.getTime() - vm.selectedTab().sun.sunrise.getTime());
+		}
+	});
+
+	vm.showWeather = ko.pureComputed(function(){
+		if (vm.selectedTab().weather()) {
+			vm.displayWeather(vm.selectedTab().weather());
+			return true;
+		}
+	});
+
+
+	/* Display information for travel tab */
+	vm.daylightChangeDisplay = ko.pureComputed(function() {
+		if (vm.journey() && $.isNumeric(vm.journey().sunlightChange())) {
+			/* Show travel info when changes */
+			$('.tabs :last').click();
+
+			return getDurationString(vm.journey().sunlightChange());
+		}
+	});
 	vm.distanceDisplay = ko.pureComputed(function() {
 		if (vm.journey() && vm.journey().distance()) {
 			return Math.round(vm.journey().distance() * 0.000621371192) + ' miles';
 		}
 	});
-
 	vm.durationDisplay = ko.pureComputed(function() {
 		if (vm.journey() && vm.journey().duration()) {
 			return getDurationString(vm.journey().duration());
 		}
 	});
-
 	vm.paceDisplay = ko.pureComputed(function() {
 		if (vm.journey() && vm.journey().distance()) {
 			vm.paceMph = (vm.journey().distance() / vm.journey().duration()) * 2236.94;
@@ -1171,7 +1189,6 @@ var viewModel = function() {
 	vm.currentCondition = ko.observable('');
 	vm.currentTemp = ko.observable('');
 
-	/* TODO: Implement weather */
 	/* Display neighborhood weather in nav bar */
 	vm.displayWeather = function(weather) {
 		vm.conditionImg('http://' + weather.condition.icon);
@@ -1196,7 +1213,7 @@ var viewModel = function() {
 		}
 	});
 	
-	/* Deal with iPhone display bug that arrises otherwise */
+	/* Deal with iPhone 4 display bug that arrises otherwise */
 	autocompleteFinish.addListener('place_changed', function() {
 		$('.departure .field').focus();
 		$('.departure .field').blur();
@@ -1219,7 +1236,7 @@ var viewModel = function() {
 		}, 50);
 	});
 
-	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation
+	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation */
 	$(function() {
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
@@ -1279,7 +1296,7 @@ var initMap = function() {
 	});
 
 
-	/* geolocation-marker in-lined here as it requires google api library */
+	/* geolocation-marker in-lined here as it requires google api library but also needs to load before the view model*/
 	(function(){/*
 	 geolocation-marker version 2.0.4
 	 @copyright 2012, 2015 Chad Killingsworth
@@ -1304,8 +1321,6 @@ var initMap = function() {
 	geoMarker.addListener('position_changed', function() {
 		map.setCenter(geoMarker.getPosition());
 	});
-
-	/* Direction services */
 	directionsService = new google.maps.DirectionsService();
 	directionsDisplay = new google.maps.DirectionsRenderer({map: map, suppressMarkers: true, draggable: true, suppressBicyclingLayer: true, panel: $('.directions')[0]});
 

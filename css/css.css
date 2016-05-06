@@ -135,7 +135,7 @@ button,
     pointer-events: none; }
 
 .search {
-  height: 175px; }
+  height: 185px; }
   .search button.set-time {
     float: left; }
 
@@ -150,6 +150,7 @@ button,
     margin-right: 0; }
 
 .tabs {
+  margin-top: -20px;
   padding: 1px;
   display: -webkit-flex;
   display: -ms-flexbox;

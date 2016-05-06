@@ -172,7 +172,7 @@ button,
 }
 
 .search {
-  height: 175px;
+  height: 185px;
 
   button.set-time {
     float: left;
@@ -196,6 +196,7 @@ button,
 }
 
 .tabs {
+  margin-top: -20px;
   padding: 1px;
   display: flex;
   justify-content: space-around;
