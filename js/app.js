@@ -214,7 +214,7 @@ Place.prototype.getWeather = function() {
 		if (placeTimeVsForecastStart % HOUR > HOUR / 2) {
 			placeTimeVsForecastStart += HOUR;
 		}
-		
+
 		var forecastDay = Math.floor(placeTimeVsForecastStart/DAY);
 		var forecastHour = Math.floor(placeTimeVsForecastStart/HOUR) % 24;
 		this.weather(this.weatherData.forecast.forecastday[forecastDay].hour[forecastHour]);
@@ -1031,8 +1031,13 @@ var viewModel = function() {
 	/* Use current arrival time for departure time and reverse the route */
 	vm.getReturnTrip = function() {
 		var newFinishLatLng = new google.maps.LatLng({lat: vm.startPlace().latLng().lat(), lng: vm.startPlace().latLng().lng()});
-		vm.startPlace().setLatLng(vm.finishPlace().latLng());
+		var newStartLatLng = new google.maps.LatLng({lat: vm.finishPlace().latLng().lat(), lng: vm.finishPlace().latLng().lng()});
 		vm.departureTime(new Date(vm.finishPlace().time.getTime()));
+		
+		vm.startPlace().reset();
+		vm.finishPlace().reset();
+
+		vm.startPlace().setLatLng(newStartLatLng);
 		vm.startPlace().createTime(vm.departureTime().getTime());
 		vm.finishPlace().setLatLng(newFinishLatLng);
 	};
