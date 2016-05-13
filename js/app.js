@@ -23,11 +23,12 @@ var contentTemplate = {
 
 /* Map marker icons images */
 var icons = {
-	standard: {img: 'imgs/default.png', pixelOffset:{width: 0, height: 0}},
-	day: {img: 'imgs/day.png', pixelOffset:{width: 0, height: 16}},
-	night: {img: 'imgs/night.png', pixelOffset:{width: 0, height: 0}},
-	sunset: {img: 'imgs/sunset.png', pixelOffset:{width: 0, height: 16}},
-	sunrise: {img: 'imgs/sunrise.png', pixelOffset:{width: 0, height: 16}}
+	standard: {url: 'imgs/default.png', pixelOffset:{width: 0, height: 0}},
+	day: {url: 'imgs/day.png', pixelOffset:{width: 0, height: 16}},
+	night: {url: 'imgs/night.png', pixelOffset:{width: 0, height: 0}},
+	sunset: {url: 'imgs/sunset.png', pixelOffset:{width: 0, height: 16}},
+	sunrise: {url: 'imgs/sunrise.png', pixelOffset:{width: 0, height: 16}},
+	location: {url: 'imgs/location.png', anchor: {x: 16, y: 17}}
 };
 
 var GetRoute = function(origin, destination, callback) {
@@ -207,9 +208,13 @@ Place.prototype.getWeather = function() {
 
 	if (placeTimeVsWeatherTime < -HOUR) {
 		this.weather(undefined);
-	} else if (placeTimeVsWeatherTime < HOUR){
+	} else if (placeTimeVsWeatherTime < HOUR/2){
 		this.weather(this.weatherData.current);
 	} else if (placeTimeVsForecastStart < (10 * DAY)) {
+		if (placeTimeVsForecastStart % HOUR > HOUR / 2) {
+			placeTimeVsForecastStart += HOUR;
+		}
+		
 		var forecastDay = Math.floor(placeTimeVsForecastStart/DAY);
 		var forecastHour = Math.floor(placeTimeVsForecastStart/HOUR) % 24;
 		this.weather(this.weatherData.forecast.forecastday[forecastDay].hour[forecastHour]);
@@ -339,7 +344,7 @@ Place.prototype.buildContent = function() {
 	this.infoWindow.setContent(this.content);
 	this.infoWindow.setOptions({pixelOffset: this.icon.pixelOffset});
 	if (this.hasOwnProperty('marker')) {
-		this.marker.setOptions({icon: this.icon.img});
+		this.marker.setOptions({icon: this.icon});
 	}
 
 	if (!this.hasSunDisplayTime()) {
@@ -357,7 +362,7 @@ Place.prototype.createMarker = function() {
 		map: map,
 		title: self.displayName,
 		draggable: self.draggable,
-		icon: self.icon.img
+		icon: self.icon.icon
 	});
 
 	/* Remove marker from map if place not active otherwise set selected to display marker */
@@ -1317,7 +1322,7 @@ var initMap = function() {
 	/* Initiate google maps objects that will be used */
 	geocoder = new google.maps.Geocoder();
 	geoMarker = new GeolocationMarker();
-	geoMarker.setMarkerOptions({visible: false});
+	geoMarker.setMarkerOptions({icon: icons.location});
 	geoMarker.addListener('position_changed', function() {
 		map.setCenter(geoMarker.getPosition());
 	});
