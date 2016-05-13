@@ -827,7 +827,6 @@ var viewModel = function() {
 			vm.startPlace().setLatLng(latLng);
 			$('.start-container').toggleClass('hidden', true);
 			vm.showAlert(false);
-			$('.arrival input').focus();
 		}
 	};
 
