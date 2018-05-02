@@ -73,8 +73,12 @@ button,
     margin: 5px 0 -10px 0;
     padding: 10px 0 0 0; }
   .info-window .cond-img {
-    padding: 5px 0;
-    margin-bottom: -25px; }
+    margin: 10px 0 -10px 0; }
+
+.cond-img {
+  width: 64px;
+  height: 64px;
+  margin: 4px; }
 
 /****** Navigation side bar ******/
 #nav-bar {

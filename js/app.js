@@ -16,7 +16,7 @@ var DAY = 86400000;
 var contentTemplate = {
 	time: '<p>at %time%</p><p class="time-zone">%timezone%</p>',
 	name: '<h3>%text%</h3>',
-	weather: '<img class="cond-img" src="http://%url%">',
+	weather: '<div class="cond-img" style="background-image: url(%url%);"></div>',
 	start: '<div class="info-window">',
 	end: '</div>'
 };
@@ -40,6 +40,7 @@ var GetRoute = function(origin, destination, callback) {
 	
 	directionsService.route(data, callback);
 };
+
 
 /*************************/
 /****** Place Class ******/
@@ -182,42 +183,32 @@ Place.prototype.getWeatherData = function() {
 	}
 
 	/* Use an API to get weather info*/
-	$.getJSON('https://api.apixu.com/v1/forecast.json?key=f7fc2a0c018f47c688b200705150412&q=' + self.latLng().lat() + ',' + self.latLng().lng() + '&days=10', function(results) {
-
+	$.getJSON(`https://api.weather.gov/points/${self.latLng().lat() + ',' + self.latLng().lng()}/forecast/hourly`, function(results) {
 		if (!results) {
-			alert('Weather data not available');
+			alert('Weather data not available1');
 			return;
 		}
-
-		self.weatherData = results;
+		self.weatherData = results.properties;
 
 		/* Determine amount API times are offset from UTC. Assumes time offset will be some increment of 30 minutes */
-		var timesDif = Date.now() - self.weatherData.location.localtime_epoch * 1000;
-		self.weatherData.timeAdjust = Math.round(timesDif / 1800000) / 2 * 3600000;
+		self.weatherData.startTime = new Date(self.weatherData.periods[0].startTime);
 		self.getWeather();
 	}).fail(function() {
-		alert('Weather data not available');
+		alert('Weather data not available2');
 	});
-
 };
 
 /* Find weather data for current time of place */
 Place.prototype.getWeather = function() {
-	var placeTimeVsWeatherTime = this.time.getTime() - (this.weatherData.current.last_updated_epoch * 1000 + this.weatherData.timeAdjust);
-	var placeTimeVsForecastStart = this.time.getTime() - (this.weatherData.forecast.forecastday[0].hour[0].time_epoch * 1000 + this.weatherData.timeAdjust);
+	var placeTimeVsForecastStart = this.time.getTime() - this.weatherData.startTime.getTime();
 
-	if (placeTimeVsWeatherTime < -HOUR) {
+	if (placeTimeVsForecastStart < -HOUR) {
 		this.weather(undefined);
-	} else if (placeTimeVsWeatherTime < HOUR/2){
-		this.weather(this.weatherData.current);
-	} else if (placeTimeVsForecastStart < (10 * DAY)) {
-		if (placeTimeVsForecastStart % HOUR > HOUR / 2) {
-			placeTimeVsForecastStart += HOUR;
-		}
-
-		var forecastDay = Math.floor(placeTimeVsForecastStart/DAY);
-		var forecastHour = Math.floor(placeTimeVsForecastStart/HOUR) % 24;
-		this.weather(this.weatherData.forecast.forecastday[forecastDay].hour[forecastHour]);
+	} else if (placeTimeVsForecastStart < HOUR/2){
+		this.weather(this.weatherData.periods[0]);
+	} else if (placeTimeVsForecastStart < (7 * DAY)) {
+		var forecastHour = Math.round(placeTimeVsForecastStart/HOUR);
+		this.weather(this.weatherData.periods[forecastHour]);
 	} else {
 		this.weather(undefined);
 	}
@@ -236,7 +227,7 @@ Place.prototype.getSunTimes = function() {
 /* Get locale timezone information */
 Place.prototype.getTimeZone = function() {
 	var self = this;
-	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + self.time.getTime()/1000 + '&key=AIzaSyB7LiznjiujsNwqvwGu7jMg6xVmnVTVSek';
+	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + self.time.getTime()/1000 + '&key=AIzaSyDuShON2e9IgPhQKmfBXa4yjUcylvCt3FE';
 	$.getJSON(url, function(results){
 		if (results.status == 'OK') {
 			self.timeZone = results;
@@ -263,8 +254,8 @@ Place.prototype.createTime = function(newTime) {
 	this.time.setTime(newTime);
 
 	if (this.latLng()) {
-		/* Only get time zone info when call doesn't change time or when hour changes */
-		if (timeDif == 0 || timeDif >= 3600000 || isNewHour) {
+		/* Only get time zone info when call doesn't change time (initial call) or when hour changes */
+		if (timeDif == 0 || timeDif >= HOUR || isNewHour) {
 			this.getTimeZone();
 		}
 		this.getSunTimes();
@@ -327,7 +318,7 @@ Place.prototype.buildContent = function() {
 	this.content += this.template.name.replace('%text%', this.displayName);
 
 	if (this.weather() && this.constructor != Waypoint) {
-		this.content += this.template.weather.replace('%url%', this.weather().condition.icon);
+		this.content += this.template.weather.replace('%url%', this.weather().icon);
 	}
 
 	this.content += this.template.time.replace('%time%', this.displayTime.string).replace('%timezone%', this.timeZoneName);
@@ -1200,9 +1191,9 @@ var viewModel = function() {
 
 	/* Display neighborhood weather in nav bar */
 	vm.displayWeather = function(weather) {
-		vm.conditionImg('http://' + weather.condition.icon);
-		vm.currentCondition(weather.condition.text);
-		vm.currentTemp(weather.temp_f + '°F');
+		vm.conditionImg(weather.icon);
+		vm.currentCondition(weather.shortForecast);
+		vm.currentTemp(weather.temperature + '°' + weather.temperatureUnit);
 	};
 
 	var autocompleteStart = new google.maps.places.Autocomplete($('.departure .field')[0]);
@@ -1306,21 +1297,23 @@ var initMap = function() {
 
 
 	/* geolocation-marker in-lined here as it requires google api library but also needs to load before the view model*/
-	(function(){/*
-	 geolocation-marker version 2.0.4
+	(function(){
+	/*
+	 geolocation-marker version 2.0.5
 	 @copyright 2012, 2015 Chad Killingsworth
 	 @see https://github.com/ChadKillingsworth/geolocation-marker/blob/master/LICENSE.txt
 	*/
-	'use strict';var b,d=this;
-	function g(a,c,e){google.maps.MVCObject.call(this);this.a=this.b=null;this.g=-1;var f={clickable:!1,cursor:"pointer",draggable:!1,flat:!0,icon:{url:"https://chadkillingsworth.github.io/geolocation-marker/images/gpsloc.png",size:new google.maps.Size(34,34),scaledSize:new google.maps.Size(17,17),origin:new google.maps.Point(0,0),anchor:new google.maps.Point(8,8)},optimized:!1,position:new google.maps.LatLng(0,0),title:"Current location",zIndex:2};c&&(f=h(f,c));c={clickable:!1,radius:0,strokeColor:"1bb6ff",
-	strokeOpacity:.4,fillColor:"61a0bf",fillOpacity:.4,strokeWeight:1,zIndex:1};e&&(c=h(c,e));this.b=new google.maps.Marker(f);this.a=new google.maps.Circle(c);google.maps.MVCObject.prototype.set.call(this,"accuracy",null);google.maps.MVCObject.prototype.set.call(this,"position",null);google.maps.MVCObject.prototype.set.call(this,"map",null);this.set("minimum_accuracy",null);this.set("position_options",{enableHighAccuracy:!0,maximumAge:1E3});this.a.bindTo("map",this.b);a&&this.f(a)}
-	(function(){var a=google.maps.MVCObject;function c(){}c.prototype=a.prototype;g.prototype=new c;g.prototype.constructor=g;for(var e in a)if(d.Object.defineProperties){var f=d.Object.getOwnPropertyDescriptor(a,e);void 0!==f&&d.Object.defineProperty(g,e,f)}else g[e]=a[e]})();b=g.prototype;b.set=function(a,c){if(k.test(a))throw"'"+a+"' is a read-only property.";"map"===a?this.f(c):google.maps.MVCObject.prototype.set.call(this,a,c)};b.i=function(){return this.get("map")};b.l=function(){return this.get("position_options")};
-	b.w=function(a){this.set("position_options",a)};b.c=function(){return this.get("position")};b.m=function(){return this.get("position")?this.a.getBounds():null};b.j=function(){return this.get("accuracy")};b.h=function(){return this.get("minimum_accuracy")};b.v=function(a){this.set("minimum_accuracy",a)};
-	b.f=function(a){google.maps.MVCObject.prototype.set.call(this,"map",a);a?navigator.geolocation&&(this.g=navigator.geolocation.watchPosition(this.A.bind(this),this.o.bind(this),this.l())):(this.b.unbind("position"),this.a.unbind("center"),this.a.unbind("radius"),google.maps.MVCObject.prototype.set.call(this,"accuracy",null),google.maps.MVCObject.prototype.set.call(this,"position",null),navigator.geolocation.clearWatch(this.g),this.g=-1,this.b.setMap(a))};b.u=function(a){this.b.setOptions(h({},a))};
-	b.s=function(a){this.a.setOptions(h({},a))};
-	b.A=function(a){var c=new google.maps.LatLng(a.coords.latitude,a.coords.longitude),e=null==this.b.getMap();if(e){if(null!=this.h()&&a.coords.accuracy>this.h())return;this.b.setMap(this.i());this.b.bindTo("position",this);this.a.bindTo("center",this,"position");this.a.bindTo("radius",this,"accuracy")}this.j()!=a.coords.accuracy&&google.maps.MVCObject.prototype.set.call(this,"accuracy",a.coords.accuracy);!e&&null!=this.c()&&this.c().equals(c)||google.maps.MVCObject.prototype.set.call(this,"position",
-	c)};b.o=function(a){google.maps.event.trigger(this,"geolocation_error",a)};function h(a,c){for(var e in c)!0!==l[e]&&(a[e]=c[e]);return a}var l={map:!0,position:!0,radius:!0},k=/^(?:position|accuracy)$/i;function m(){g.prototype.getAccuracy=g.prototype.j;g.prototype.getBounds=g.prototype.m;g.prototype.getMap=g.prototype.i;g.prototype.getMinimumAccuracy=g.prototype.h;g.prototype.getPosition=g.prototype.c;g.prototype.getPositionOptions=g.prototype.l;g.prototype.setCircleOptions=g.prototype.s;g.prototype.setMap=g.prototype.f;g.prototype.setMarkerOptions=g.prototype.u;g.prototype.setMinimumAccuracy=g.prototype.v;g.prototype.setPositionOptions=g.prototype.w;return g}
-	"function"===typeof this.define&&this.define.amd?this.define([],m):"object"===typeof this.exports?this.module.exports=m():this.GeolocationMarker=m();}).call(this)
+	'use strict';var b;function e(a,c){function f(){}f.prototype=c.prototype;a.B=c.prototype;a.prototype=new f;a.prototype.constructor=a;for(var g in c)if("prototype"!=g)if(Object.defineProperties){var d=Object.getOwnPropertyDescriptor(c,g);d&&Object.defineProperty(a,g,d)}else a[g]=c[g]}
+	function h(a,c,f,g){var d=google.maps.MVCObject.call(this)||this;d.c=null;d.b=null;d.a=null;d.i=-1;var l={clickable:!1,cursor:"pointer",draggable:!1,flat:!0,icon:{path:google.maps.SymbolPath.CIRCLE,fillColor:"#C8D6EC",fillOpacity:.7,scale:12,strokeWeight:0},position:new google.maps.LatLng(0,0),title:"Current location",zIndex:2},m={clickable:!1,cursor:"pointer",draggable:!1,flat:!0,icon:{path:google.maps.SymbolPath.CIRCLE,fillColor:"#4285F4",fillOpacity:1,scale:6,strokeColor:"white",strokeWeight:2},
+	optimized:!1,position:new google.maps.LatLng(0,0),title:"Current location",zIndex:3};c&&(l=k(l,c));f&&(m=k(m,f));c={clickable:!1,radius:0,strokeColor:"1bb6ff",strokeOpacity:.4,fillColor:"61a0bf",fillOpacity:.4,strokeWeight:1,zIndex:1};g&&(c=k(c,g));d.c=new google.maps.Marker(l);d.b=new google.maps.Marker(m);d.a=new google.maps.Circle(c);google.maps.MVCObject.prototype.set.call(d,"accuracy",null);google.maps.MVCObject.prototype.set.call(d,"position",null);google.maps.MVCObject.prototype.set.call(d,
+	"map",null);d.set("minimum_accuracy",null);d.set("position_options",{enableHighAccuracy:!0,maximumAge:1E3});d.a.bindTo("map",d.c);d.a.bindTo("map",d.b);a&&d.setMap(a);return d}e(h,google.maps.MVCObject);b=h.prototype;b.set=function(a,c){if(n.test(a))throw"'"+a+"' is a read-only property.";"map"===a?this.setMap(c):google.maps.MVCObject.prototype.set.call(this,a,c)};b.f=function(){return this.get("map")};b.l=function(){return this.get("position_options")};
+	b.w=function(a){this.set("position_options",a)};b.g=function(){return this.get("position")};b.m=function(){return this.get("position")?this.a.getBounds():null};b.j=function(){return this.get("accuracy")};b.h=function(){return this.get("minimum_accuracy")};b.v=function(a){this.set("minimum_accuracy",a)};
+	b.setMap=function(a){google.maps.MVCObject.prototype.set.call(this,"map",a);a?navigator.geolocation&&(this.i=navigator.geolocation.watchPosition(this.A.bind(this),this.o.bind(this),this.l())):(this.c.unbind("position"),this.b.unbind("position"),this.a.unbind("center"),this.a.unbind("radius"),google.maps.MVCObject.prototype.set.call(this,"accuracy",null),google.maps.MVCObject.prototype.set.call(this,"position",null),navigator.geolocation.clearWatch(this.i),this.i=-1,this.c.setMap(a),this.b.setMap(a))};
+	b.u=function(a){this.b.setOptions(k({},a))};b.s=function(a){this.a.setOptions(k({},a))};
+	b.A=function(a){var c=new google.maps.LatLng(a.coords.latitude,a.coords.longitude),f=!this.b.getMap();if(f){if(null!=this.h()&&a.coords.accuracy>this.h())return;this.c.setMap(this.f());this.b.setMap(this.f());this.c.bindTo("position",this);this.b.bindTo("position",this);this.a.bindTo("center",this,"position");this.a.bindTo("radius",this,"accuracy")}this.j()!=a.coords.accuracy&&google.maps.MVCObject.prototype.set.call(this,"accuracy",a.coords.accuracy);!f&&this.g()&&this.g().equals(c)||google.maps.MVCObject.prototype.set.call(this,
+	"position",c)};b.o=function(a){google.maps.event.trigger(this,"geolocation_error",a)};function k(a,c){for(var f in c)!0!==p[f]&&(a[f]=c[f]);return a}var p={map:!0,position:!0,radius:!0},n=/^(?:position|accuracy)$/i;var q=window;function r(){h.prototype.getAccuracy=h.prototype.j;h.prototype.getBounds=h.prototype.m;h.prototype.getMap=h.prototype.f;h.prototype.getMinimumAccuracy=h.prototype.h;h.prototype.getPosition=h.prototype.g;h.prototype.getPositionOptions=h.prototype.l;h.prototype.setCircleOptions=h.prototype.s;h.prototype.setMap=h.prototype.setMap;h.prototype.setMarkerOptions=h.prototype.u;h.prototype.setMinimumAccuracy=h.prototype.v;h.prototype.setPositionOptions=h.prototype.w;return h}
+	"function"===typeof q.define&&q.define.amd?q.define([],r):"object"===typeof q.exports?q.module.exports=r():q.GeolocationMarker=r();
+	}).call(this)
 	//# sourceMappingURL=geolocation-marker.js.map
 
 	/* Initiate google maps objects that will be used */

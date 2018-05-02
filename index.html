@@ -64,7 +64,7 @@
                         <div class="cur-condition">
                             <p class="cond-text" data-bind="text: currentCondition"></p>
                             <div class="cond-figure">
-                                <img class="cond-img" data-bind="attr: {src: conditionImg}" alt=''>
+                                <div class="cond-img" data-bind="style: { backgroundImage: 'url(' + conditionImg() + ')'}" alt=''></div>
                                 <p class="temp" data-bind="text: currentTemp"></p>
                             </div>
                         </div>
@@ -141,7 +141,7 @@
         <script src="js/sunCalc/suncalc.js"></script>
         <script src="js/app.js"></script>
         <!-- endbuild -->
-        <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBWwVMaBib0W7SYe2bWz9gT-ZU6KPC5yug&callback=initMap&libraries=places"></script>
+        <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABG0-lKtzUkZcANns7U1qcGHQnlnUGBG0&callback=initMap&libraries=places"></script>
     </body>
 
 </html>
