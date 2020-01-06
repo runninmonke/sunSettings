@@ -105,8 +105,8 @@ button,
 }
 
 .cond-img {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   margin: 4px;
 }
 
@@ -158,6 +158,10 @@ button,
 /*** Search ***/
 
 .travel-mode {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-around;
+  padding-bottom: 8px;
   pointer-events: none;
 
   button {
@@ -193,7 +197,7 @@ button,
                 1px 0 1px #444;
   padding: 25px 5px 0 0;
   width: 233px;
-  height: calc(100% - 214px);
+  height: calc(100% - 225px);
   overflow: auto;
   
   button {
