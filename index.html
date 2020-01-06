@@ -14,10 +14,10 @@
         <div id="nav-bar" data-bind="attr: {class: menuStatus}">
             <section class="search">
                 <div class="travel-mode row" data-bind="click: travelModeClick">
-                    <button type"button" id="locate" data-bind="click: $root.toggleGeoMarker"><p class='character'>➤</p></button>
-                    <button type="button" value="WALKING">🚶</button>
-                    <button type="button" value="BICYCLING">🚲</button>
                     <button type="button" value="DRIVING" class="selected">🚗</button>
+                    <button type="button" value="BICYCLING">🚲</button>
+                    <button type="button" value="WALKING">🚶</button>
+                    <button type"button" id="locate" data-bind="click: $root.toggleGeoMarker"><p class='character'>➤</p></button>
                 </div>                    
                 <div class="departure row" data-bind="with: startPlace">
                     <div class="label">Start</div>
@@ -43,7 +43,7 @@
                 <div class="tabs row" data-bind="click: tabClick">
                     <div class="selected">Start</div>
                     <div class="deselected">Finish</div>
-                    <div class="deselected">Travels</div>
+                    <div class="deselected">Trip</div>
                 </div>
                 <hr>
                 <div class="places" data-bind="visible: showPlace">
@@ -64,7 +64,7 @@
                         <div class="cur-condition">
                             <p class="cond-text" data-bind="text: currentCondition"></p>
                             <div class="cond-figure">
-                                <div class="cond-img" data-bind="style: { backgroundImage: 'url(' + conditionImg() + ')'}" alt=''></div>
+                                <div class="cond-img" data-bind="style: { backgroundImage: conditionImg() }" alt=''></div>
                                 <p class="temp" data-bind="text: currentTemp"></p>
                             </div>
                         </div>
@@ -141,7 +141,6 @@
         <script src="js/sunCalc/suncalc.js"></script>
         <script src="js/app.js"></script>
         <!-- endbuild -->
-        <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABG0-lKtzUkZcANns7U1qcGHQnlnUGBG0&callback=initMap&libraries=places"></script>
     </body>
 
 </html>
