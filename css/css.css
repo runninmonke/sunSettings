@@ -32,11 +32,7 @@ body {
 .label {
   padding: 1px;
   color: #ffe168;
-  text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444,
-    -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444,
-    0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444,
-    1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444;
-  }
+  text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444; }
 
 .buttons {
   margin: 0 -2px;
@@ -97,18 +93,12 @@ button,
     margin: 7px 10px 7px 7px; }
 
 .open {
-  transition: -webkit-transform 0.3s;
   transition: transform 0.3s;
-  transition: transform 0.3s, -webkit-transform 0.3s;
-  -webkit-transform: translate3d(235px, 0, 0);
-          transform: translate3d(235px, 0, 0); }
+  transform: translate3d(235px, 0, 0); }
 
 .closed {
-  transition: -webkit-transform 0.3s;
   transition: transform 0.3s;
-  transition: transform 0.3s, -webkit-transform 0.3s;
-  -webkit-transform: translate3d(0, 0, 0);
-          transform: translate3d(0, 0, 0); }
+  transform: translate3d(0, 0, 0); }
 
 #hamburger {
   position: absolute;
@@ -128,12 +118,12 @@ button,
 
 /*** Search ***/
 .travel-mode {
+  display: -ms-flexbox;
   display: flex;
-  flex-direction: row-reverse;
-  justify-content: space-around;
+  -ms-flex-pack: distribute;
+      justify-content: space-around;
   padding-bottom: 8px;
-  pointer-events: none;
-}
+  pointer-events: none; }
   .travel-mode button {
     height: 30px;
     padding: 2px 10px;
@@ -141,7 +131,6 @@ button,
     margin: 0 5px;
     pointer-events: all; }
   .travel-mode .character {
-    -webkit-transform: rotate(-50deg);
     transform: rotate(-50deg);
     font-size: 0.8em;
     margin: 2px 0;
@@ -154,10 +143,7 @@ button,
 
 /*** Info ***/
 .stats {
-  text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444,
-    -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444,
-    0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444,
-    1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444;
+  text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444;
   padding: 25px 5px 0 0;
   width: 233px;
   height: calc(100% - 225px);
@@ -168,12 +154,10 @@ button,
 .tabs {
   margin-top: -20px;
   padding: 1px;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-justify-content: space-around;
-      -ms-flex-pack: distribute;
-          justify-content: space-around; }
+  -ms-flex-pack: distribute;
+      justify-content: space-around; }
   .tabs > div {
     cursor: pointer; }
 
@@ -187,12 +171,7 @@ button,
 
 .selected {
   color: black;
-  text-shadow: -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168, 0 -1px 1px #ffe168,
-    -1px -1px 1px #ffe168, -1px 1px 1px #ffe168, 1px -1px 1px #ffe168, 1px 1px 1px #ffe168,
-    -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168, 0 -1px 1px #ffe168,
-    -1px -1px 1px #ffe168, -1px 1px 1px #ffe168, 1px -1px 1px #ffe168, 1px 1px 1px #ffe168,
-    -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168;
-  }
+  text-shadow: -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168, 0 -1px 1px #ffe168, -1px -1px 1px #ffe168, -1px 1px 1px #ffe168, 1px -1px 1px #ffe168, 1px 1px 1px #ffe168, -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168, 0 -1px 1px #ffe168, -1px -1px 1px #ffe168, -1px 1px 1px #ffe168, 1px -1px 1px #ffe168, 1px 1px 1px #ffe168, -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168; }
 
 .deselected {
   font-size: 0.95em;
@@ -223,24 +202,16 @@ button,
 /*** Weather ***/
 .weather {
   /* Iterate text shadow to eliminate blur gradient and give thick outline effect */
-  text-shadow: -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8,
-    -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8,
-    -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8,
-    -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8,
-    -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8;
-  }
+  text-shadow: -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8, -2px -2px 2px #e6e7e8, -2px 2px 2px #e6e7e8, 2px -2px 2px #e6e7e8, 2px 2px 2px #e6e7e8, -2px 0 2px #e6e7e8, 0 2px 2px #e6e7e8, 2px 0 2px #e6e7e8, 0 -2px 2px #e6e7e8; }
 
 .cur-condition {
   margin-top: -15px;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-justify-content: flex-end;
-      -ms-flex-pack: end;
-          justify-content: flex-end;
-  -webkit-align-items: center;
-      -ms-flex-align: center;
-          align-items: center;
+  -ms-flex-pack: end;
+      justify-content: flex-end;
+  -ms-flex-align: center;
+      align-items: center;
   color: #444; }
 
 .cond-text {
@@ -251,15 +222,12 @@ button,
 
 .cond-figure {
   font-size: 1.2em;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-flex-direction: column;
-      -ms-flex-direction: column;
-          flex-direction: column;
-  -webkit-justify-content: center;
-      -ms-flex-pack: center;
-          justify-content: center; }
+  -ms-flex-direction: column;
+      flex-direction: column;
+  -ms-flex-pack: center;
+      justify-content: center; }
 
 .temp {
   font-size: 1.1em;
@@ -279,12 +247,10 @@ button,
   background: rgba(128, 128, 128, 0.6);
   z-index: 10;
   pointer-events: none;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-flex-flow: center;
-      -ms-flex-flow: center;
-          flex-flow: center; }
+  -ms-flex-flow: center;
+      flex-flow: center; }
 
 .alert-window {
   margin: auto;
