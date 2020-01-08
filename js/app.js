@@ -53,9 +53,8 @@ var Place = function(data) {
 	self.active = ko.observable(true);
 	self.hasSunDisplayTime = ko.observable(false);
 	self.weather = ko.observable();
+	self.timeZone = undefined;
 	self.status = 'deselected';
-	this.timeZoneOffset = undefined;
-	this.timeZoneName = undefined;
 	self.content = '';
 	self.icon = icons.standard;
 
@@ -117,8 +116,7 @@ Place.prototype.reset = function() {
 	this.active(true);
 	this.hasSunDisplayTime(false);
 	this.weather('');
-	this.timeZoneOffset = undefined;
-	this.timeZoneName = undefined;
+	this.timeZone = undefined;
 	this.status = 'deselected';
 	this.content = '';
 
@@ -239,14 +237,11 @@ Place.prototype.getSunTimes = function() {
 Place.prototype.getTimeZone = function() {
 	var self = this;
 	var url = `https://maps.googleapis.com/maps/api/timezone/json?location=${self.latLng().lat()},${self.latLng().lng()}&timestamp=${self.time.getTime()/1000}&key=${KEYS.TIMEZONE}`;
-
 	$.getJSON(url, function(results){
 		if (results.status == 'OK') {
-			self.timeZoneName = results.timeZoneName;
-			self.timeZoneOffset = (results.rawOffset + results.dstOffset) / 60;
+			self.timeZone = results;
 		} else {
-			self.timeZoneName = 'Coordinated Universal Time';
-			self.timeZoneOffset = 0;
+			self.timeZone = undefined;
 		}
 		self.buildContent();
 	});
@@ -279,19 +274,13 @@ Place.prototype.createTime = function(newTime) {
 
 // Return a date object where the UTC time is actually the local timezone time.
 // Also includes a formatted string of the time as property.
-Place.prototype.getDisplayTime = function(time = false) {
-	console.log('time!', time)
-	if (!time) {
-		time = this.time;
-	}
-
-	var userTimezoneDiff = this.timeZoneOffset + time.getTimezoneOffset();
-	var displayTime = new Date(time.getTime() + (userTimezoneDiff * 3600000));
+function getDisplayTime(time, timeZoneOffset) {
+	var displayTime = new Date(time.getTime() + timeZoneOffset);
 	displayTime.meridie = 'AM';
-	displayTime.hours = displayTime.getHours();
-	displayTime.minutes = displayTime.getMinutes().toString();
-	displayTime.seconds = displayTime.getSeconds().toString();
-	console.log(this.name, displayTime.hours, this.time);
+
+	displayTime.hours = displayTime.getUTCHours();
+	displayTime.minutes = displayTime.getUTCMinutes().toString();
+	displayTime.seconds = displayTime.getUTCSeconds().toString();
 
 	if (displayTime.hours > 12) {
 		displayTime.meridie = 'PM';
@@ -312,20 +301,25 @@ Place.prototype.getDisplayTime = function(time = false) {
 
 	displayTime.string = `${displayTime.hours}:${displayTime.minutes}:${displayTime.seconds} ${displayTime.meridie}`;
 	return displayTime;
-};
+}
 
-Place.prototype.findTimeFromLocal = function(time) {
-	var userTimezoneDiff = this.timeZoneOffset - time.getTimezoneOffset();
-	return new Date(time.getTime() + (userTimezoneDiff * 3600000));
-};
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
-	this.displayTime = this.getDisplayTime();
+	this.timeZoneName = 'UTC';
+
+	if (this.timeZone) {
+		this.timeZoneName = this.timeZone.timeZoneName;
+		this.timeZoneOffset = (this.timeZone.rawOffset + this.timeZone.dstOffset) * 1000;
+	} else {
+		this.timeZoneOffset = 0;
+	}
+
+	this.displayTime = getDisplayTime(this.time, this.timeZoneOffset);
 
 	for (var item in this.sun) {
 		if (this.sun.hasOwnProperty(item)) {
-			this.sun[item].displayTime = this.getDisplayTime(this.sun[item]).string;
+			this.sun[item].displayTime = getDisplayTime(this.sun[item], this.timeZoneOffset).string;
 		}
 	}
 
@@ -815,6 +809,7 @@ var viewModel = function() {
 	}
 
 	vm.showAlert = ko.observable(true);
+	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
 		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field').val()}));
@@ -949,7 +944,7 @@ var viewModel = function() {
 		}
 
 		vm.showAlert(true);
-		$('.time-container input').eq(0).focus();
+		$('.date').focus();
 	};
 
 	/* Read input into new Date object */
@@ -963,10 +958,11 @@ var viewModel = function() {
 
 		var newMonth = $('.month').val() - 1;
 
-		return new Date($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val());
+		return new Date(Date.UTC($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val()));
 	};
 
 	// TODO: Add error handling.
+    // TODO: Only update if vm.journey().startPlace().time - newTime > 60000
 	vm.setDepartureTime = function() {
 		var newTime = vm.getNewTime();
 		var oldTime = vm.journey() ? vm.journey().startPlace().displayTime : new Date(0);
@@ -1168,13 +1164,13 @@ var viewModel = function() {
 	
 	vm.selectedSunrise = ko.pureComputed(function() {
 		if (vm.selectedTab().hasSunDisplayTime()) {
-			return vm.selectedTab().getDisplayTime(vm.selectedTab().sun.sunrise).string;
+			return getDisplayTime(vm.selectedTab().sun.sunrise, vm.selectedTab().timeZoneOffset).string;
 		}
 	});
 
 	vm.selectedSunset = ko.pureComputed(function() {
 		if (vm.selectedTab().hasSunDisplayTime()) {
-			return vm.selectedTab().getDisplayTime(vm.selectedTab().sun.sunset).string;
+			return getDisplayTime(vm.selectedTab().sun.sunset, vm.selectedTab().timeZoneOffset).string;
 		}
 	});
 
@@ -1279,9 +1275,8 @@ var viewModel = function() {
 		}, 50);
 	});
 
+	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation */
 	$(function() {
-		$('.alert-window .field').focus();
-		// Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation.
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
 			if (mq.matches && !vm.showAlert()) {
