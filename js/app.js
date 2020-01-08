@@ -280,12 +280,12 @@ Place.prototype.createTime = function(newTime) {
 // Return a date object where the UTC time is actually the local timezone time.
 // Also includes a formatted string of the time as property.
 function getDisplayTime(time, timeZoneOffset) {
-	var displayTime = new Date(time.getTime() + timeZoneOffset);
+	var displayTime = new Date(time.getTime());
 	displayTime.meridie = 'AM';
 
-	displayTime.hours = displayTime.getUTCHours();
-	displayTime.minutes = displayTime.getUTCMinutes().toString();
-	displayTime.seconds = displayTime.getUTCSeconds().toString();
+	displayTime.hours = displayTime.getHours();
+	displayTime.minutes = displayTime.getMinutes().toString();
+	displayTime.seconds = displayTime.getSeconds().toString();
 
 	if (displayTime.hours > 12) {
 		displayTime.meridie = 'PM';
@@ -814,7 +814,6 @@ var viewModel = function() {
 	}
 
 	vm.showAlert = ko.observable(true);
-	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
 		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field').val()}));
@@ -949,7 +948,7 @@ var viewModel = function() {
 		}
 
 		vm.showAlert(true);
-		$('.date').focus();
+		$('.time-container input').eq(0).focus();
 	};
 
 	/* Read input into new Date object */
@@ -963,7 +962,7 @@ var viewModel = function() {
 
 		var newMonth = $('.month').val() - 1;
 
-		return new Date(Date.UTC($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val()));
+		return new Date($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val());
 	};
 
 	// TODO: Add error handling.
@@ -976,7 +975,6 @@ var viewModel = function() {
 			Math.abs(oldTime.valueOf() - newTime.valueOf()) >= 2000
 			|| oldTime.getSeconds() !== newTime.getSeconds()
 		) {
-			newTime.setTime(newTime.getTime() + (-1 * vm.startPlace().timeZoneOffset));
 			vm.departureTime(newTime);
 			vm.startPlace().createTime(newTime.getTime());
 		}
@@ -1004,7 +1002,6 @@ var viewModel = function() {
 			Math.abs(oldTime.valueOf() - newTime.valueOf()) >= 2000
 			|| oldTime.getSeconds() !== newTime.getSeconds()
 		) {
-			newTime.setTime(newTime.getTime() + (-1 * vm.finishPlace().timeZoneOffset));
 			var newPace = (newTime.getTime() - vm.startPlace().time.getTime()) / vm.journey().duration();
 			newPace = newPace * vm.paceMultiplier();
 			vm.changePace({}, {}, newPace);
@@ -1280,8 +1277,9 @@ var viewModel = function() {
 		}, 50);
 	});
 
-	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation */
 	$(function() {
+		$('.alert-window .field').focus();
+		// Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation.
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
 			if (mq.matches && !vm.showAlert()) {
