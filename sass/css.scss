@@ -225,6 +225,10 @@ button,
   font-size: 0.95em;
 }
 
+.inactive {
+  opacity: 0.4;
+}
+
 .selected {
   color: black;
   text-shadow: -1px 0 1px #ffe168, 0 1px 1px #ffe168, 1px 0 1px #ffe168, 0 -1px 1px #ffe168, -1px -1px 1px #ffe168, -1px 1px 1px #ffe168, 1px -1px 1px #ffe168, 1px 1px 1px #ffe168, -1px 0 1px #ffe168,

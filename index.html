@@ -41,9 +41,9 @@
             </section>
             <section class="stats">
                 <div class="tabs row" data-bind="click: tabClick">
-                    <div class="selected">Start</div>
-                    <div class="deselected">Finish</div>
-                    <div class="deselected">Trip</div>
+                    <div id="start-tab" class="selected inactive">Start</div>
+                    <div id="finish-tab" class="deselected inactive">Finish</div>
+                    <div id="trip-tab" class="deselected inactive">Trip</div>
                 </div>
                 <hr>
                 <div class="places" data-bind="visible: showPlace">

@@ -1,6 +1,8 @@
 /*global $, google, ko, SunCalc*/
 'use strict';
 
+const KEYS={REFERRER:"AIzaSyCEAKJpWQnt4gTDzqDQ5qb5lHwYVTKikQQ",TIMEZONE:"AIzaSyD_lPi6-cxtP6_6MX_JQheT0Ao5XbTQPp4"};
+
 /* Maximum times a SunPlace will refine it's location */
 var MAX_ATTEMPTS = 5;
 /* Maximum error in ms allowed for estimate to be considered accurate */
@@ -54,8 +56,8 @@ var Place = function(data) {
 	self.hasSunDisplayTime = ko.observable(false);
 	self.weather = ko.observable();
 	self.status = 'deselected';
-	this.timeZoneOffset = undefined;
-	this.timeZoneName = undefined;
+	this.timeZoneOffset = 0;
+	this.timeZoneName = 'Coordinated Universal time';
 	self.content = '';
 	self.icon = icons.standard;
 
@@ -117,8 +119,8 @@ Place.prototype.reset = function() {
 	this.active(true);
 	this.hasSunDisplayTime(false);
 	this.weather('');
-	this.timeZoneOffset = undefined;
-	this.timeZoneName = undefined;
+	this.timeZoneOffset = 0;
+	this.timeZoneName = 'Coordinated Universal time';
 	this.status = 'deselected';
 	this.content = '';
 
@@ -245,7 +247,7 @@ Place.prototype.getTimeZone = function() {
 			self.timeZoneName = results.timeZoneName;
 			self.timeZoneOffset = (results.rawOffset + results.dstOffset) / 60;
 		} else {
-			self.timeZoneName = 'Coordinated Universal Time';
+			self.timeZoneName = undefined;
 			self.timeZoneOffset = 0;
 		}
 		self.buildContent();
@@ -269,7 +271,10 @@ Place.prototype.createTime = function(newTime) {
 
 	if (this.latLng()) {
 		/* Only get time zone info when call doesn't change time (initial call) or when hour changes */
-		if (timeDif == 0 || timeDif >= HOUR || isNewHour) {
+		if (
+			(timeDif == 0 || timeDif >= HOUR || isNewHour)
+			&& (this.finalized === undefined || this.finalized === true)
+		) {
 			this.getTimeZone();
 		}
 		this.getSunTimes();
@@ -279,19 +284,13 @@ Place.prototype.createTime = function(newTime) {
 
 // Return a date object where the UTC time is actually the local timezone time.
 // Also includes a formatted string of the time as property.
-Place.prototype.getDisplayTime = function(time = false) {
-	console.log('time!', time)
-	if (!time) {
-		time = this.time;
-	}
-
+Place.prototype.getDisplayTime = function(time) {
 	var userTimezoneDiff = this.timeZoneOffset + time.getTimezoneOffset();
-	var displayTime = new Date(time.getTime() + (userTimezoneDiff * 3600000));
+	var displayTime = new Date(time.getTime() + (userTimezoneDiff * 60000));
 	displayTime.meridie = 'AM';
 	displayTime.hours = displayTime.getHours();
 	displayTime.minutes = displayTime.getMinutes().toString();
 	displayTime.seconds = displayTime.getSeconds().toString();
-	console.log(this.name, displayTime.hours, this.time);
 
 	if (displayTime.hours > 12) {
 		displayTime.meridie = 'PM';
@@ -321,7 +320,7 @@ Place.prototype.findTimeFromLocal = function(time) {
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
-	this.displayTime = this.getDisplayTime();
+	this.displayTime = this.getDisplayTime(this.time);
 
 	for (var item in this.sun) {
 		if (this.sun.hasOwnProperty(item)) {
@@ -487,6 +486,7 @@ SunPlace.prototype.finalize = function() {
 	this.toggleSelected();
 	this.finalized = true;
 	this.getWeatherData();
+	this.getTimeZone();
 
 	vm.journey().finalize();
 };
@@ -823,7 +823,7 @@ var viewModel = function() {
 		vm.showAlert(false);
 
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
-		autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0]);
+		autocompleteStart = new google.maps.places.Autocomplete($('.departure .field')[0]);
 		autocompleteStart.bindTo('bounds', map);
 		$('.arrival input').focus();
 	};
@@ -836,12 +836,12 @@ var viewModel = function() {
 			vm.startPlace().setLatLng(latLng);
 			$('.start-container').toggleClass('hidden', true);
 			vm.showAlert(false);
+			$('.arrival input').focus();
 		}
 	};
 
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(vm.getStartLocation);
-		$('.arrival input').focus();
 	} else {
 		alert('Browser not supported');
 	}
@@ -1063,10 +1063,10 @@ var viewModel = function() {
 
 	/* Updates startPlace time when running so current time */
 	vm.timer = function() {
-		if (!vm.departureTime() && !vm.journey()) {
-			vm.startPlace().createTime(Date.now());
-			setTimeout(vm.timer, 1000);
-		}
+		// if (!vm.departureTime() && !vm.journey()) {
+		// 	vm.startPlace().createTime(Date.now());
+		// 	setTimeout(vm.timer, 1000);
+		// }
 	};
 
 	vm.timer();
@@ -1159,6 +1159,12 @@ var viewModel = function() {
 		$('.places'). toggleClass('hidden', false);
 		$('.journey').toggleClass('hidden', true);		
 	};
+
+	vm.setActiveTabs = ko.computed(function() {
+		$('#start-tab').toggleClass('inactive', !vm.startPlace().latLng());
+		$('#finish-tab').toggleClass('inactive', !vm.finishPlace().latLng());
+		$('#trip-tab').toggleClass('inactive', !vm.journey());
+	});
 
 	vm.showPlace = ko.pureComputed(function() {
 		if (vm.selectedTab().hasSunDisplayTime()) {
