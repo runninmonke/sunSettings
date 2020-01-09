@@ -1,10 +1,15 @@
 /*global $, google, ko, SunCalc*/
 'use strict';
 
+const KEYS = {
+	REFERRER: 'Insert appropriate key',
+	TIMEZONE: 'Insert appropriate key'
+};
+
 /* Maximum times a SunPlace will refine it's location */
 var MAX_ATTEMPTS = 5;
 /* Maximum error in ms allowed for estimate to be considered accurate */
-var ESTIMATE_RANGE = 30000;
+var ESTIMATE_RANGE = 150000;
 
 /* Units of time in milliseconds */
 var SECOND = 1000;
@@ -53,8 +58,9 @@ var Place = function(data) {
 	self.active = ko.observable(true);
 	self.hasSunDisplayTime = ko.observable(false);
 	self.weather = ko.observable();
-	self.timeZone = undefined;
 	self.status = 'deselected';
+	this.timeZoneOffset = 0;
+	this.timeZoneName = 'Coordinated Universal time';
 	self.content = '';
 	self.icon = icons.standard;
 
@@ -115,8 +121,9 @@ Place.prototype.reset = function() {
 	this.status = 'deselected';
 	this.active(true);
 	this.hasSunDisplayTime(false);
-	this.weather(undefined);
-	this.timeZone = undefined;
+	this.weather('');
+	this.timeZoneOffset = 0;
+	this.timeZoneName = 'Coordinated Universal time';
 	this.status = 'deselected';
 	this.content = '';
 
@@ -182,11 +189,14 @@ Place.prototype.getWeatherData = function() {
 		return;
 	}
 
+	self.weatherData = 'Loading';
+	self.getWeather();
+
 	/* Use an API to get weather info*/
 	$.getJSON(`https://api.weather.gov/points/${self.latLng().lat() + ',' + self.latLng().lng()}/forecast/hourly`, function(results) {
 		if (!results) {
-			alert('Weather data not available1');
-			return;
+			self.weatherData = 'Unavailable';
+			self.getWeather();
 		}
 		self.weatherData = results.properties;
 
@@ -194,23 +204,29 @@ Place.prototype.getWeatherData = function() {
 		self.weatherData.startTime = new Date(self.weatherData.periods[0].startTime);
 		self.getWeather();
 	}).fail(function() {
-		alert('Weather data not available2');
+		self.weatherData = 'Unavailable';
+		self.getWeather();
 	});
 };
 
 /* Find weather data for current time of place */
 Place.prototype.getWeather = function() {
+	if (typeof(this.weatherData) === 'string') {
+		this.weather(this.weatherData);
+		return;
+	}
+
 	var placeTimeVsForecastStart = this.time.getTime() - this.weatherData.startTime.getTime();
 
 	if (placeTimeVsForecastStart < -HOUR) {
-		this.weather(undefined);
+		this.weather('');
 	} else if (placeTimeVsForecastStart < HOUR/2){
 		this.weather(this.weatherData.periods[0]);
 	} else if (placeTimeVsForecastStart < (7 * DAY)) {
 		var forecastHour = Math.round(placeTimeVsForecastStart/HOUR);
 		this.weather(this.weatherData.periods[forecastHour]);
 	} else {
-		this.weather(undefined);
+		this.weather('');
 	}
 
 	this.buildContent();
@@ -227,12 +243,15 @@ Place.prototype.getSunTimes = function() {
 /* Get locale timezone information */
 Place.prototype.getTimeZone = function() {
 	var self = this;
-	var url = 'https://maps.googleapis.com/maps/api/timezone/json?location=' + self.latLng().lat() + ',' + self.latLng().lng() + '&timestamp=' + self.time.getTime()/1000 + '&key=AIzaSyDuShON2e9IgPhQKmfBXa4yjUcylvCt3FE';
+	var url = `https://maps.googleapis.com/maps/api/timezone/json?location=${self.latLng().lat()},${self.latLng().lng()}&timestamp=${self.time.getTime()/1000}&key=${KEYS.TIMEZONE}`;
+
 	$.getJSON(url, function(results){
 		if (results.status == 'OK') {
-			self.timeZone = results;
+			self.timeZoneName = results.timeZoneName;
+			self.timeZoneOffset = (results.rawOffset + results.dstOffset) / 60;
 		} else {
-			self.timeZone = undefined;
+			self.timeZoneName = undefined;
+			self.timeZoneOffset = 0;
 		}
 		self.buildContent();
 	});
@@ -255,7 +274,10 @@ Place.prototype.createTime = function(newTime) {
 
 	if (this.latLng()) {
 		/* Only get time zone info when call doesn't change time (initial call) or when hour changes */
-		if (timeDif == 0 || timeDif >= HOUR || isNewHour) {
+		if (
+			(timeDif == 0 || timeDif >= HOUR || isNewHour)
+			&& (this.finalized === undefined || this.finalized === true)
+		) {
 			this.getTimeZone();
 		}
 		this.getSunTimes();
@@ -263,14 +285,15 @@ Place.prototype.createTime = function(newTime) {
 	}
 };
 
-/* Return a date object where the UTC time is actually the local timezone time. Also includes a formatted string of the time as property */
-function getDisplayTime(time, timeZoneOffset) {
-	var displayTime = new Date(time.getTime() + timeZoneOffset);
+// Return a date object where the UTC time is actually the local timezone time.
+// Also includes a formatted string of the time as property.
+Place.prototype.getDisplayTime = function(time) {
+	var userTimezoneDiff = this.timeZoneOffset + time.getTimezoneOffset();
+	var displayTime = new Date(time.getTime() + (userTimezoneDiff * 60000));
 	displayTime.meridie = 'AM';
-
-	displayTime.hours = displayTime.getUTCHours();
-	displayTime.minutes = displayTime.getUTCMinutes().toString();
-	displayTime.seconds = displayTime.getUTCSeconds().toString();
+	displayTime.hours = displayTime.getHours();
+	displayTime.minutes = displayTime.getMinutes().toString();
+	displayTime.seconds = displayTime.getSeconds().toString();
 
 	if (displayTime.hours > 12) {
 		displayTime.meridie = 'PM';
@@ -289,36 +312,34 @@ function getDisplayTime(time, timeZoneOffset) {
 		displayTime.seconds = '0' + displayTime.seconds;
 	}
 
-	displayTime.string = displayTime.hours + ':' + displayTime.minutes + ':' +  displayTime.seconds + ' ' + displayTime.meridie;
-
+	displayTime.string = `${displayTime.hours}:${displayTime.minutes}:${displayTime.seconds} ${displayTime.meridie}`;
 	return displayTime;
-}
+};
 
+Place.prototype.findTimeFromLocal = function(time) {
+	var userTimezoneDiff = this.timeZoneOffset + time.getTimezoneOffset();
+	return new Date(time.getTime() - (userTimezoneDiff * 60000));
+};
 
 /* Check for what data has been successfully retrieved and build content for infoWindow by plugging it into the template */
 Place.prototype.buildContent = function() {
-	this.timeZoneName = 'UTC';
-
-	if (this.timeZone) {
-		this.timeZoneName = this.timeZone.timeZoneName;
-		this.timeZoneOffset = (this.timeZone.rawOffset + this.timeZone.dstOffset) * 1000;
-	} else {
-		this.timeZoneOffset = 0;
-	}
-
-	this.displayTime = getDisplayTime(this.time, this.timeZoneOffset);
+	this.displayTime = this.getDisplayTime(this.time);
 
 	for (var item in this.sun) {
 		if (this.sun.hasOwnProperty(item)) {
-			this.sun[item].displayTime = getDisplayTime(this.sun[item], this.timeZoneOffset).string;
+			this.sun[item].displayTime = this.getDisplayTime(this.sun[item]).string;
 		}
 	}
 
 	this.content = this.template.start;
 	this.content += this.template.name.replace('%text%', this.displayName);
 
-	if (this.weather() && this.constructor != Waypoint) {
-		this.content += this.template.weather.replace('%url%', this.weather().icon);
+	if (this.constructor != Waypoint) {
+		if (this.weather() && typeof(this.weather()) !== 'string') {
+			this.content += this.template.weather.replace('%url%', this.weather().icon);
+		} else if (this.finalized) {
+			this.content += this.template.weather.replace('%url%', 'imgs/no-weather.png');
+		}
 	}
 
 	this.content += this.template.time.replace('%time%', this.displayTime.string).replace('%timezone%', this.timeZoneName);
@@ -468,6 +489,7 @@ SunPlace.prototype.finalize = function() {
 	this.toggleSelected();
 	this.finalized = true;
 	this.getWeatherData();
+	this.getTimeZone();
 
 	vm.journey().finalize();
 };
@@ -796,7 +818,6 @@ var viewModel = function() {
 	}
 
 	vm.showAlert = ko.observable(true);
-	$('.alert-window .field').focus();
 
 	vm.inputStart = function() {
 		vm.startPlace(new Waypoint({name: 'start', address: $('.alert-window .field').val()}));
@@ -805,7 +826,7 @@ var viewModel = function() {
 		vm.showAlert(false);
 
 		/* Re-bind autocomplete functionality otherwise Knockout interupts it*/
-		autocompleteStart = new google.maps.places.Autocomplete($('.start .field')[0]);
+		autocompleteStart = new google.maps.places.Autocomplete($('.departure .field')[0]);
 		autocompleteStart.bindTo('bounds', map);
 		$('.arrival input').focus();
 	};
@@ -818,12 +839,12 @@ var viewModel = function() {
 			vm.startPlace().setLatLng(latLng);
 			$('.start-container').toggleClass('hidden', true);
 			vm.showAlert(false);
+			$('.arrival input').focus();
 		}
 	};
 
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(vm.getStartLocation);
-		$('.arrival input').focus();
 	} else {
 		alert('Browser not supported');
 	}
@@ -856,6 +877,7 @@ var viewModel = function() {
 	vm.travelModeClick = function(obj, evt) {
 		if (evt.target.id != 'locate') {
 			vm.travelMode(evt.target.value);
+            vm.paceMultiplier(1000);
 
 			var locateStatus = $('#locate')[0].className;
 
@@ -905,9 +927,9 @@ var viewModel = function() {
 		$('.alert-window').css('min-width', '210px');
 		$('.time-container').toggleClass('hidden', false);
 
-		$('.month').val(this.displayTime.getUTCMonth() + 1);
-		$('.day').val(this.displayTime.getUTCDate());
-		$('.year').val(this.displayTime.getUTCFullYear());
+		$('.month').val(this.displayTime.getMonth() + 1);
+		$('.day').val(this.displayTime.getDate());
+		$('.year').val(this.displayTime.getFullYear());
 
 		$('.hours').val(this.displayTime.hours);
 		$('.minutes').val(this.displayTime.minutes);
@@ -930,7 +952,7 @@ var viewModel = function() {
 		}
 
 		vm.showAlert(true);
-		$('.date').focus();
+		$('.time-container input').eq(0).focus();
 	};
 
 	/* Read input into new Date object */
@@ -944,26 +966,31 @@ var viewModel = function() {
 
 		var newMonth = $('.month').val() - 1;
 
-		return new Date(Date.UTC($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val()));
+		return new Date($('.year').val(), newMonth, $('.day').val(), newHours, $('.minutes').val(), $('.seconds').val());
 	};
 
-	/* TODO: Add error handling */
+	// TODO: Add error handling.
 	vm.setDepartureTime = function() {
-		var newTime = vm.getNewTime();
-		newTime.setTime(newTime.getTime() + (-1 * vm.startPlace().timeZoneOffset));
-		
-		vm.departureTime(newTime);
-		vm.startPlace().createTime(newTime.getTime());
+		var newTime = vm.startPlace().findTimeFromLocal(vm.getNewTime());
+		var oldTime = vm.journey() ? vm.journey().startPlace().time : new Date(0);
+
+		if (
+			Math.abs(oldTime.valueOf() - newTime.valueOf()) >= 2000
+			|| oldTime.getSeconds() !== newTime.getSeconds()
+		) {
+			vm.departureTime(newTime);
+			vm.startPlace().createTime(newTime);
+		}
 
 		$('.time-container').toggleClass('hidden', true);
 		vm.showAlert(false);
-
 		$('.departure .set-time').focus();
 	};
 
 	/* Use current time for next departure time */
 	vm.removeDepartureTime = function() {
-		vm.departureTime(undefined);
+		// Use different falsey value from initialization to ensure changes are registered.
+		vm.departureTime(false);
 		vm.timer();
 		vm.showAlert(false);
 		$('.set-time').focus();
@@ -971,18 +998,21 @@ var viewModel = function() {
 
 
 	vm.setArrivalTime = function() {
-		var newTime = vm.getNewTime();
-		newTime.setTime(newTime.getTime() + (-1 * vm.finishPlace().timeZoneOffset));
+		var newTime = vm.finishPlace().findTimeFromLocal(vm.getNewTime());
+		var oldTime = vm.journey() ? vm.journey().finishPlace().time : new Date(0);
 
-		var newPace = (newTime.getTime() - vm.startPlace().time.getTime()) / vm.journey().duration();
-
-		newPace = newPace * vm.paceMultiplier();
+		if (
+			Math.abs(oldTime.valueOf() - newTime.valueOf()) >= 2000
+			|| oldTime.getSeconds() !== newTime.getSeconds()
+		) {
+			var newPace = (newTime.getTime() - vm.startPlace().time.getTime()) / vm.journey().duration();
+			newPace = newPace * vm.paceMultiplier();
+			vm.changePace({}, {}, newPace);
+		}
 
 		$('.time-container').toggleClass('hidden', true);
 		vm.showAlert(false);
-
 		$('.arrival .set-time').focus();
-		vm.changePace({}, {}, newPace);
 	};
 
 	/* UI for changing travel speed */
@@ -1057,7 +1087,13 @@ var viewModel = function() {
 	/* Loads new route when Google LatLng objects are loaded for both start and finish places */
 	vm.getJourney = ko.computed(function() {
 		/* Some parts of conditional are only present to make KO trigger function when the variables involved change */
-		if (vm.startPlace().latLng() && vm.finishPlace().latLng() && vm.paceMultiplier() && (!vm.journey() || vm.journey().finalized)) {
+		if (
+        vm.startPlace().latLng()
+        && vm.finishPlace().latLng()
+        && vm.paceMultiplier()
+        && vm.travelMode()
+        && (!vm.journey() || vm.journey().finalized)
+    ) {
 			if (vm.journey()) {
 				vm.journey().resetSunEvents();
 				vm.journey().finalized = false;
@@ -1104,14 +1140,14 @@ var viewModel = function() {
 
 	vm.tabClick = function(obj, evt) {
 		var tab = evt.target.textContent;
-		if ((tab == 'Finish' && !vm.finishPlace().latLng()) || (tab == 'Travels' && !vm.journey()) || evt.target.className == 'tabs row') {
+		if ((tab == 'Finish' && !vm.finishPlace().latLng()) || (tab == 'Trip' && !vm.journey()) || evt.target.className == 'tabs row') {
 			return;
 		}
 
 		$('.tabs div').attr('class', 'deselected');
 		evt.target.className = 'selected';
 
-		if (tab == 'Travels') {
+		if (tab == 'Trip') {
 			$('.places'). toggleClass('hidden', true);
 			$('.journey').toggleClass('hidden', false);
 			return;
@@ -1125,6 +1161,12 @@ var viewModel = function() {
 		$('.journey').toggleClass('hidden', true);		
 	};
 
+	vm.setActiveTabs = ko.computed(function() {
+		$('#start-tab').toggleClass('inactive', !vm.startPlace().latLng());
+		$('#finish-tab').toggleClass('inactive', !vm.finishPlace().latLng());
+		$('#trip-tab').toggleClass('inactive', !vm.journey());
+	});
+
 	vm.showPlace = ko.pureComputed(function() {
 		if (vm.selectedTab().hasSunDisplayTime()) {
 			return true;
@@ -1133,13 +1175,13 @@ var viewModel = function() {
 	
 	vm.selectedSunrise = ko.pureComputed(function() {
 		if (vm.selectedTab().hasSunDisplayTime()) {
-			return getDisplayTime(vm.selectedTab().sun.sunrise, vm.selectedTab().timeZoneOffset).string;
+			return vm.selectedTab().getDisplayTime(vm.selectedTab().sun.sunrise).string;
 		}
 	});
 
 	vm.selectedSunset = ko.pureComputed(function() {
 		if (vm.selectedTab().hasSunDisplayTime()) {
-			return getDisplayTime(vm.selectedTab().sun.sunset, vm.selectedTab().timeZoneOffset).string;
+			return vm.selectedTab().getDisplayTime(vm.selectedTab().sun.sunset).string;
 		}
 	});
 
@@ -1150,10 +1192,8 @@ var viewModel = function() {
 	});
 
 	vm.showWeather = ko.pureComputed(function(){
-		if (vm.selectedTab().weather()) {
-			vm.displayWeather(vm.selectedTab().weather());
-			return true;
-		}
+		vm.displayWeather(vm.selectedTab().weather());
+		return true;
 	});
 
 
@@ -1185,15 +1225,25 @@ var viewModel = function() {
 	});
 
 	/* Variables for weather section display */
-	vm.conditionImg = ko.observable('');
+	vm.conditionImg = ko.observable('none');
 	vm.currentCondition = ko.observable('');
 	vm.currentTemp = ko.observable('');
 
-	/* Display neighborhood weather in nav bar */
+	/* Display local weather in nav bar */
 	vm.displayWeather = function(weather) {
-		vm.conditionImg(weather.icon);
-		vm.currentCondition(weather.shortForecast);
-		vm.currentTemp(weather.temperature + '°' + weather.temperatureUnit);
+		if (!weather) {
+			weather = '';
+		}
+
+		if (typeof(weather) === 'string') {
+			vm.conditionImg('none');
+			vm.currentCondition(weather);
+			vm.currentTemp('');
+		} else {
+			vm.conditionImg(`url(${weather.icon})`);
+			vm.currentCondition(weather.shortForecast);
+			vm.currentTemp(weather.temperature + '°' + weather.temperatureUnit);
+		}
 	};
 
 	var autocompleteStart = new google.maps.places.Autocomplete($('.departure .field')[0]);
@@ -1236,8 +1286,9 @@ var viewModel = function() {
 		}, 50);
 	});
 
-	/* Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation */
 	$(function() {
+		$('.alert-window .field').focus();
+		// Listener to deal with body overflow that occurs on iPhone 4 in lanscape orientation.
 		window.addEventListener('scroll', function(){
 			var mq = window.matchMedia('only screen and (max-device-width: 600px) and (orientation: landscape)');
 			if (mq.matches && !vm.showAlert()) {
@@ -1272,6 +1323,12 @@ var directionsService;
 var directionsDisplay;
 var panorama;
 var vm;
+
+// Insert Google Maps script
+var mapsScript   = document.createElement("script");
+mapsScript.type  = "text/javascript";
+mapsScript.src   = `https://maps.googleapis.com/maps/api/js?key=${KEYS.REFERRER}&callback=initMap&libraries=places`;
+document.body.appendChild(mapsScript);
 
 /* Callback function for the initial Google Maps API request */
 var initMap = function() {

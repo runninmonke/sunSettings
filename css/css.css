@@ -76,8 +76,8 @@ button,
     margin: 10px 0 -10px 0; }
 
 .cond-img {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   margin: 4px; }
 
 /****** Navigation side bar ******/
@@ -93,18 +93,12 @@ button,
     margin: 7px 10px 7px 7px; }
 
 .open {
-  transition: -webkit-transform 0.3s;
   transition: transform 0.3s;
-  transition: transform 0.3s, -webkit-transform 0.3s;
-  -webkit-transform: translate3d(235px, 0, 0);
-          transform: translate3d(235px, 0, 0); }
+  transform: translate3d(235px, 0, 0); }
 
 .closed {
-  transition: -webkit-transform 0.3s;
   transition: transform 0.3s;
-  transition: transform 0.3s, -webkit-transform 0.3s;
-  -webkit-transform: translate3d(0, 0, 0);
-          transform: translate3d(0, 0, 0); }
+  transform: translate3d(0, 0, 0); }
 
 #hamburger {
   position: absolute;
@@ -124,6 +118,11 @@ button,
 
 /*** Search ***/
 .travel-mode {
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-pack: distribute;
+      justify-content: space-around;
+  padding-bottom: 8px;
   pointer-events: none; }
   .travel-mode button {
     height: 30px;
@@ -132,7 +131,6 @@ button,
     margin: 0 5px;
     pointer-events: all; }
   .travel-mode .character {
-    -webkit-transform: rotate(-50deg);
     transform: rotate(-50deg);
     font-size: 0.8em;
     margin: 2px 0;
@@ -148,7 +146,7 @@ button,
   text-shadow: -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444, 0 -1px 1px #444, -1px -1px 1px #444, -1px 1px 1px #444, 1px -1px 1px #444, 1px 1px 1px #444, -1px 0 1px #444, 0 1px 1px #444, 1px 0 1px #444;
   padding: 25px 5px 0 0;
   width: 233px;
-  height: calc(100% - 214px);
+  height: calc(100% - 225px);
   overflow: auto; }
   .stats button {
     margin-right: 0; }
@@ -156,12 +154,10 @@ button,
 .tabs {
   margin-top: -20px;
   padding: 1px;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-justify-content: space-around;
-      -ms-flex-pack: distribute;
-          justify-content: space-around; }
+  -ms-flex-pack: distribute;
+      justify-content: space-around; }
   .tabs > div {
     cursor: pointer; }
 
@@ -172,6 +168,9 @@ button,
 .places div,
 .journey div {
   font-size: 0.95em; }
+
+.inactive {
+  opacity: 0.4; }
 
 .selected {
   color: black;
@@ -210,15 +209,12 @@ button,
 
 .cur-condition {
   margin-top: -15px;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-justify-content: flex-end;
-      -ms-flex-pack: end;
-          justify-content: flex-end;
-  -webkit-align-items: center;
-      -ms-flex-align: center;
-          align-items: center;
+  -ms-flex-pack: end;
+      justify-content: flex-end;
+  -ms-flex-align: center;
+      align-items: center;
   color: #444; }
 
 .cond-text {
@@ -229,15 +225,12 @@ button,
 
 .cond-figure {
   font-size: 1.2em;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-flex-direction: column;
-      -ms-flex-direction: column;
-          flex-direction: column;
-  -webkit-justify-content: center;
-      -ms-flex-pack: center;
-          justify-content: center; }
+  -ms-flex-direction: column;
+      flex-direction: column;
+  -ms-flex-pack: center;
+      justify-content: center; }
 
 .temp {
   font-size: 1.1em;
@@ -257,12 +250,10 @@ button,
   background: rgba(128, 128, 128, 0.6);
   z-index: 10;
   pointer-events: none;
-  display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  -webkit-flex-flow: center;
-      -ms-flex-flow: center;
-          flex-flow: center; }
+  -ms-flex-flow: center;
+      flex-flow: center; }
 
 .alert-window {
   margin: auto;
